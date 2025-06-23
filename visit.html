@@ -15,7 +15,7 @@
 
   const store = new URLSearchParams(window.location.search).get("store") || "unknown";
 
-  fetch("https://hooks.zapier.com/hooks/catch/YOUR_ZAP_ID_HERE/", {
+  fetch("https://hooks.zapier.com/hooks/catch/6984728/uo78v01/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ uuid, store, timestamp: new Date().toISOString() })
