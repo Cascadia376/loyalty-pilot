@@ -10,9 +10,10 @@
 </head>
 <body>
   <h1>Thanks for checking in!</h1>
+  <p id="error-message" style="color:red"></p>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    (function () {
       if (window.__visitPosted) return; // guard against multiple executions
       window.__visitPosted = true;
       const WEBHOOK_URL = 'https://hooks.zapier.com/hooks/catch/123456/your-id/';
@@ -30,7 +31,7 @@
         const payload = {
           uuid,
           store,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
           // Add optional fields such as email, first_name, last_name, opt_in here
         };
 
@@ -38,11 +39,21 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
-        }).catch(err => console.error('Error posting visit:', err));
+        }).then(res => {
+          if (!res.ok) {
+            throw new Error('Request failed with status ' + res.status);
+          }
+        }).catch(err => {
+          document.getElementById('error-message').textContent =
+            'Visit logging failed. Please try again later.';
+          console.error('Error posting visit:', err);
+        });
       } catch (err) {
+        document.getElementById('error-message').textContent =
+          'Visit logging failed. Please try again later.';
         console.error('Failed to prepare visit data:', err);
       }
-    });
+    })();
   </script>
 </body>
 </html>
