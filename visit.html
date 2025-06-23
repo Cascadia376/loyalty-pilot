@@ -1,104 +1,59 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Thanks for Checking In</title>
-<style>
-  body { font-family: sans-serif; padding: 2rem; max-width: 400px; margin: auto; }
-  h1 { font-size: 1.5rem; }
-  label { display:block; margin: 0.5rem 0 0.2rem; }
-  input, button { width:100%; padding:0.5rem; }
-  form { margin-top:1.5rem; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thanks for Checking In</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 2rem; }
+  </style>
 </head>
 <body>
-<h1>Thanks for checking in!</h1>
-<p id="welcomeMsg">We appreciate you stopping by.</p>
+  <h1>Thanks for checking in!</h1>
+  <p id="error-message" style="color:red"></p>
 
-<form id="userForm" style="display:none;">
-  <label for="first_name">First name</label>
-  <input id="first_name" name="first_name" required>
+  <script>
+    (function () {
+      if (window.__visitPosted) return; // guard against multiple executions
+      window.__visitPosted = true;
+      const WEBHOOK_URL = 'https://hooks.zapier.com/hooks/catch/123456/your-id/';
 
-  <label for="last_name">Last name</label>
-  <input id="last_name" name="last_name" required>
+      try {
+        let uuid = localStorage.getItem('visitUUID');
+        if (!uuid) {
+          uuid = crypto.randomUUID();
+          localStorage.setItem('visitUUID', uuid);
+        }
 
-  <label for="email">Email address</label>
-  <input id="email" name="email" type="email" required>
+        const params = new URLSearchParams(window.location.search);
+        const store = params.get('store') || 'unknown';
 
-  <label><input id="opt_in" name="opt_in" type="checkbox"> I’d like to receive emails & updates</label>
+        const payload = {
+          uuid,
+          store,
+          timestamp: new Date().toISOString(),
+          // Add optional fields such as email, first_name, last_name, opt_in here
+        };
 
-  <button type="submit">Save Info</button>
-</form>
-
-<script>
-const WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/6984728/uo78v01/"; // <- PUT YOUR REAL ZAP URL HERE
-
-// Generate / retrieve persistent UUID
-const uuid = localStorage.getItem("visitUUID") || (() => {
-  const id = crypto.randomUUID();
-  localStorage.setItem("visitUUID", id); return id;
-})();
-
-// Get store ID from URL params
-const store = new URLSearchParams(window.location.search).get("store") || "unknown";
-
-// Load any saved profile data
-const profile = {
-  first_name: localStorage.getItem("visitFirstName") || "",
-  last_name: localStorage.getItem("visitLastName") || "",
-  email: localStorage.getItem("visitEmail") || "",
-  opt_in: localStorage.getItem("visitOptIn") === "true"
-};
-
-// Show the form if we don’t have an email yet
-const form = document.getElementById('userForm');
-if (!profile.email) {
-  form.style.display = "block";
-} else {
-  document.getElementById('welcomeMsg').textContent = `Welcome back${profile.first_name ? ", " + profile.first_name : ""}!`;
-}
-
-// Handle form submission
-form.addEventListener('submit', e => {
-  e.preventDefault();
-  profile.first_name = e.target.first_name.value.trim();
-  profile.last_name = e.target.last_name.value.trim();
-  profile.email = e.target.email.value.trim();
-  profile.opt_in = e.target.opt_in.checked;
-
-  // Save to localStorage
-  localStorage.setItem("visitFirstName", profile.first_name);
-  localStorage.setItem("visitLastName", profile.last_name);
-  localStorage.setItem("visitEmail", profile.email);
-  localStorage.setItem("visitOptIn", profile.opt_in);
-
-  form.style.display = "none";
-  document.getElementById('welcomeMsg').textContent = `Thanks, ${profile.first_name}. You’re all set!`;
-
-  sendVisitData();
-});
-
-// Fire-and-forget function
-function sendVisitData() {
-  fetch(WEBHOOK_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      uuid,
-      store,
-      timestamp: new Date().toISOString(),
-      first_name: profile.first_name,
-      last_name: profile.last_name,
-      email: profile.email,
-      opt_in: profile.opt_in
-    })
-  })
-  .catch(console.error);
-}
-
-// Immediately log visit
-sendVisitData();
-</script>
+        fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).then(res => {
+          if (!res.ok) {
+            throw new Error('Request failed with status ' + res.status);
+          }
+        }).catch(err => {
+          document.getElementById('error-message').textContent =
+            'Visit logging failed. Please try again later.';
+          console.error('Error posting visit:', err);
+        });
+      } catch (err) {
+        document.getElementById('error-message').textContent =
+          'Visit logging failed. Please try again later.';
+        console.error('Failed to prepare visit data:', err);
+      }
+    })();
+  </script>
 </body>
 </html>
