@@ -4,23 +4,101 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Thanks for Checking In</title>
+<style>
+  body { font-family: sans-serif; padding: 2rem; max-width: 400px; margin: auto; }
+  h1 { font-size: 1.5rem; }
+  label { display:block; margin: 0.5rem 0 0.2rem; }
+  input, button { width:100%; padding:0.5rem; }
+  form { margin-top:1.5rem; }
+</style>
 </head>
 <body>
 <h1>Thanks for checking in!</h1>
+<p id="welcomeMsg">We appreciate you stopping by.</p>
+
+<form id="userForm" style="display:none;">
+  <label for="first_name">First name</label>
+  <input id="first_name" name="first_name" required>
+
+  <label for="last_name">Last name</label>
+  <input id="last_name" name="last_name" required>
+
+  <label for="email">Email address</label>
+  <input id="email" name="email" type="email" required>
+
+  <label><input id="opt_in" name="opt_in" type="checkbox"> I’d like to receive emails & updates</label>
+
+  <button type="submit">Save Info</button>
+</form>
+
 <script>
-  const uuid = localStorage.getItem("visitUUID") || (() => {
-    const id = crypto.randomUUID();
-    localStorage.setItem("visitUUID", id); return id;
-  })();
+const WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/6984728/uo78v01/"; // <- PUT YOUR REAL ZAP URL HERE
 
-  const store = new URLSearchParams(window.location.search).get("store") || "unknown";
+// Generate / retrieve persistent UUID
+const uuid = localStorage.getItem("visitUUID") || (() => {
+  const id = crypto.randomUUID();
+  localStorage.setItem("visitUUID", id); return id;
+})();
 
-  fetch("https://hooks.zapier.com/hooks/catch/6984728/uo78v01/", {
+// Get store ID from URL params
+const store = new URLSearchParams(window.location.search).get("store") || "unknown";
+
+// Load any saved profile data
+const profile = {
+  first_name: localStorage.getItem("visitFirstName") || "",
+  last_name: localStorage.getItem("visitLastName") || "",
+  email: localStorage.getItem("visitEmail") || "",
+  opt_in: localStorage.getItem("visitOptIn") === "true"
+};
+
+// Show the form if we don’t have an email yet
+const form = document.getElementById('userForm');
+if (!profile.email) {
+  form.style.display = "block";
+} else {
+  document.getElementById('welcomeMsg').textContent = `Welcome back${profile.first_name ? ", " + profile.first_name : ""}!`;
+}
+
+// Handle form submission
+form.addEventListener('submit', e => {
+  e.preventDefault();
+  profile.first_name = e.target.first_name.value.trim();
+  profile.last_name = e.target.last_name.value.trim();
+  profile.email = e.target.email.value.trim();
+  profile.opt_in = e.target.opt_in.checked;
+
+  // Save to localStorage
+  localStorage.setItem("visitFirstName", profile.first_name);
+  localStorage.setItem("visitLastName", profile.last_name);
+  localStorage.setItem("visitEmail", profile.email);
+  localStorage.setItem("visitOptIn", profile.opt_in);
+
+  form.style.display = "none";
+  document.getElementById('welcomeMsg').textContent = `Thanks, ${profile.first_name}. You’re all set!`;
+
+  sendVisitData();
+});
+
+// Fire-and-forget function
+function sendVisitData() {
+  fetch(WEBHOOK_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ uuid, store, timestamp: new Date().toISOString() })
+    body: JSON.stringify({
+      uuid,
+      store,
+      timestamp: new Date().toISOString(),
+      first_name: profile.first_name,
+      last_name: profile.last_name,
+      email: profile.email,
+      opt_in: profile.opt_in
+    })
   })
-  .catch(err => console.error(err));
+  .catch(console.error);
+}
+
+// Immediately log visit
+sendVisitData();
 </script>
 </body>
 </html>
