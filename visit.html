@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Thanks for Checking In</title>
+</head>
+<body>
+<h1>Thanks for checking in!</h1>
+<script>
+  const uuid = localStorage.getItem("visitUUID") || (() => {
+    const id = crypto.randomUUID();
+    localStorage.setItem("visitUUID", id); return id;
+  })();
+
+  const store = new URLSearchParams(window.location.search).get("store") || "unknown";
+
+  fetch("https://hooks.zapier.com/hooks/catch/YOUR_ZAP_ID_HERE/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ uuid, store, timestamp: new Date().toISOString() })
+  })
+  .catch(err => console.error(err));
+</script>
+</body>
+</html>
