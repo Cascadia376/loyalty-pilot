@@ -1,48 +1,95 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Thanks for Checking In</title>
-  <style>
-    body { font-family: Arial, sans-serif; text-align: center; padding: 2rem; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Thanks for Visiting</title>
+<style>
+  body { font-family: Arial,sans-serif; padding: 2rem; max-width: 500px; margin: auto; text-align: center; }
+  h1 { font-size: 1.5rem; }
+  label { display:block; margin:0.5rem 0 0.2rem; text-align:left; }
+  input[type=text], input[type=email] { width:100%; padding:0.5rem; }
+  .hidden { display:none; }
+  button { margin-top:1rem; padding:0.7rem; width:100%; cursor:pointer; }
+</style>
 </head>
 <body>
-  <h1>Thanks for checking in!</h1>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      if (window.__visitPosted) return; // guard against multiple executions
-      window.__visitPosted = true;
-      const WEBHOOK_URL = 'https://hooks.zapier.com/hooks/catch/6984728/uo78v01/';
+<h1 id="greeting">Thanks for checking in!</h1>
 
-      try {
-        let uuid = localStorage.getItem('visitUUID');
-        if (!uuid) {
-          uuid = crypto.randomUUID();
-          localStorage.setItem('visitUUID', uuid);
-        }
+<form id="profileForm" class="hidden">
+  <label for="firstName">First Name</label>
+  <input id="firstName" name="firstName" type="text" required />
 
-        const params = new URLSearchParams(window.location.search);
-        const store = params.get('store') || 'unknown';
+  <label for="lastName">Last Name</label>
+  <input id="lastName" name="lastName" type="text" required />
 
-        const payload = {
-          uuid,
-          store,
-          timestamp: new Date().toISOString()
-          // Add optional fields such as email, first_name, last_name, opt_in here
-        };
+  <label for="email">Email</label>
+  <input id="email" name="email" type="email" required />
 
-        fetch(WEBHOOK_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        }).catch(err => console.error('Error posting visit:', err));
-      } catch (err) {
-        console.error('Failed to prepare visit data:', err);
-      }
-    });
-  </script>
+  <label><input id="optIn" name="optIn" type="checkbox" /> Yes, I want to receive emails</label>
+
+  <button type="submit">Submit</button>
+</form>
+
+<script>
+(async function() {
+  const webhook = "https://hooks.zapier.com/hooks/catch/6984728/uo78v01/";
+  const uuid = localStorage.getItem("visitUUID") || (() => {
+    const id = crypto.randomUUID();
+    localStorage.setItem("visitUUID", id); return id;
+  })();
+  const store = new URLSearchParams(window.location.search).get("store") || "unknown";
+  
+  const profileCache = JSON.parse(localStorage.getItem("profileData") || "{}");
+
+  const profileForm = document.getElementById('profileForm');
+  const greeting = document.getElementById('greeting');
+
+  // Already have profile info? Hide the form
+  if (profileCache.email) {
+    greeting.innerText = "Welcome back, " + profileCache.firstName + "!";
+    logVisit();
+  } else {
+    profileForm.classList.remove('hidden'); // Show the profile form
+  }
+
+  // Capture profile & log visit
+  profileForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {
+      firstName: profileForm.firstName.value.trim(),
+      lastName: profileForm.lastName.value.trim(),
+      email: profileForm.email.value.trim(),
+      optIn: profileForm.optIn.checked,
+    };
+    localStorage.setItem("profileData", JSON.stringify(data));
+    greeting.innerText = "Thanks, " + data.firstName + "!";
+    profileForm.classList.add('hidden');
+
+    logVisit(data); // send profile + visit
+  });
+
+  async function logVisit(profile = profileCache) {
+    const payload = {
+      uuid,
+      store,
+      timestamp: new Date().toISOString(),
+      firstName: profile.firstName || "",
+      lastName: profile.lastName || "",
+      email: profile.email || "",
+      optIn: profile.optIn || false,
+    };
+    try {
+      await fetch(webhook, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+      });
+    } catch (e) { console.error("Error logging visit:", e); }
+  }
+})();
+</script>
+
 </body>
 </html>
