@@ -9,8 +9,8 @@
   h1 { font-size: 1.5rem; }
   label { display:block; margin:0.5rem 0 0.2rem; text-align:left; }
   input[type=text], input[type=email] { width:100%; padding:0.5rem; }
-  .hidden { display:none; }
   button { margin-top:1rem; padding:0.7rem; width:100%; cursor:pointer; }
+  .hidden { display:none; }
 </style>
 </head>
 <body>
@@ -39,58 +39,60 @@
     const id = crypto.randomUUID();
     localStorage.setItem("visitUUID", id); return id;
   })();
-  const store = new URLSearchParams(window.location.search).get("store") || "unknown";
-  
-  const profileCache = JSON.parse(localStorage.getItem("profileData") || "{}");
 
+  const store = new URLSearchParams(window.location.search).get("store") || "unknown";
+  let visitCount = parseInt(localStorage.getItem('visitCount') || "0");
+
+  const profileCache = JSON.parse(localStorage.getItem("profileData") || "{}");
   const profileForm = document.getElementById('profileForm');
   const greeting = document.getElementById('greeting');
 
-  // Already have profile info? Hide the form
+  // If we already have profile info, increment and send visit
   if (profileCache.email) {
     greeting.innerText = "Welcome back, " + profileCache.firstName + "!";
-    logVisit();
+    visitCount += 1;
+    localStorage.setItem('visitCount', visitCount);
+    logVisit(profileCache);
   } else {
-    profileForm.classList.remove('hidden'); // Show the profile form
+    profileForm.classList.remove('hidden'); // show form to new visitors
   }
 
-  // Capture profile & log visit
   profileForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const data = {
       firstName: profileForm.firstName.value.trim(),
       lastName: profileForm.lastName.value.trim(),
       email: profileForm.email.value.trim(),
-      optIn: profileForm.optIn.checked,
+      optIn: profileForm.optIn.checked
     };
-    localStorage.setItem("profileData", JSON.stringify(data));
+    localStorage.setItem('profileData', JSON.stringify(data));
+    visitCount += 1;
+    localStorage.setItem('visitCount', visitCount);
     greeting.innerText = "Thanks, " + data.firstName + "!";
     profileForm.classList.add('hidden');
 
-    logVisit(data); // send profile + visit
+    logVisit(data);
   });
 
-  async function logVisit(profile = profileCache) {
+  async function logVisit(profile) {
     const payload = {
       uuid,
       store,
       timestamp: new Date().toISOString(),
+      visitCount,
       firstName: profile.firstName || "",
       lastName: profile.lastName || "",
       email: profile.email || "",
-      optIn: profile.optIn || false,
+      optIn: profile.optIn || false
     };
-    try {
-      await fetch(webhook, {
-        method: "POST",
-        mode: "no-cors",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify(payload)
-      });
-    } catch (e) { console.error("Error logging visit:", e); }
+    fetch(webhook, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).catch(err => console.error(err));
   }
 })();
 </script>
-
 </body>
 </html>
