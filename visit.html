@@ -1,175 +1,169 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Kamloops Giveaway Entry</title>
-  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    body {
-      font-family: 'Source Sans 3', sans-serif;
-      background-color: #f9fbfc;
-      margin: 0;
-      padding: 2rem;
-      display: flex;
-      align-items: center;
-     
-    }
-
-    .form-container {
-      width: 100%;
-      max-width: 600px;
-    }
-
-    h1 {
-      text-align: center;
-      font-size: 2rem;
-      color: #2a7f7f;
-      margin-bottom: 2rem;
-    }
-
-    label {
-      display: block;
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-      margin-top: 1.5rem;
-    }
-
-    input[type="text"],
-    input[type="email"] {
-      width: 100%;
-      padding: 1rem;
-      font-size: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      box-sizing: border-box;
-      transition: border 0.3s, box-shadow 0.3s;
-    }
-
-    input:focus {
-      border-color: #339999;
-      box-shadow: 0 0 0 3px rgba(51, 153, 153, 0.15);
-      outline: none;
-    }
-
-    .checkbox-group {
-      margin-top: 1.5rem;
-      display: flex;
-      align-items: center;
-    }
-
-    .checkbox-group input[type="checkbox"] {
-      margin-right: 0.5rem;
-      accent-color: #339999;
-    }
-
-    button {
-      margin-top: 2rem;
-      padding: 1rem;
-      width: 100%;
-      font-size: 1rem;
-      font-weight: bold;
-      color: white;
-      background-color: #339999;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: background-color 0.3s ease, transform 0.2s ease;
-    }
-
-    button:hover {
-      background-color: #2a7f7f;
-      transform: translateY(-2px);
-    }
-
-    .hidden {
-      display: none;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Thanks for Visiting</title>
+<style>
+  body { font-family: Arial,sans-serif; padding: 2rem; max-width: 500px; margin: auto; text-align: center; }
+  h1 { font-size: 1.5rem; }
+  label { display:block; margin:0.5rem 0 0.2rem; text-align:left; }
+  input[type=text], input[type=email] { width:100%; padding:0.5rem; }
+  button { margin-top:1rem; padding:0.7rem; width:100%; cursor:pointer; }
+  .hidden { display:none; }
+</style>
 </head>
 <body>
 
-  <div class="form-container">
-    <h1 id="greeting">Enter to Win</h1>
-    <form id="profileForm" class="hidden">
-      <label for="firstName">First Name</label>
-      <input id="firstName" name="firstName" type="text" required />
+<h1 id="greeting">Thanks for checking in!</h1>
 
-      <label for="lastName">Last Name</label>
-      <input id="lastName" name="lastName" type="text" required />
+<form id="profileForm" class="hidden">
+  <label for="firstName">First Name</label>
+  <input id="firstName" name="firstName" type="text" required />
 
-      <label for="email">Email</label>
-      <input id="email" name="email" type="email" required />
+  <label for="lastName">Last Name</label>
+  <input id="lastName" name="lastName" type="text" required />
 
-      <div class="checkbox-group">
-        <input id="optIn" name="optIn" type="checkbox" />
-        <label for="optIn">Yes, I want to receive emails</label>
-      </div>
+  <label for="email">Email</label>
+  <input id="email" name="email" type="email" required />
 
-      <button type="submit">Submit Entry</button>
-    </form>
-  </div>
+  <label><input id="optIn" name="optIn" type="checkbox" /> Yes, I want to receive emails</label>
 
-  <script>
-    (async function () {
-      const webhook = "https://hooks.zapier.com/hooks/catch/6984728/uo78v01/";
-      const uuid = localStorage.getItem("visitUUID") || (() => {
-        const id = crypto.randomUUID();
-        localStorage.setItem("visitUUID", id);
-        return id;
-      })();
+  <button type="submit">Submit</button>
+</form>
 
-      const store = new URLSearchParams(window.location.search).get("store") || "unknown";
-      let visitCount = parseInt(localStorage.getItem('visitCount') || "0");
+<div id="questionContainer" class="hidden"></div>
 
-      const profileCache = JSON.parse(localStorage.getItem("profileData") || "{}");
-      const profileForm = document.getElementById('profileForm');
-      const greeting = document.getElementById('greeting');
+<script>
+(async function() {
+  const webhook = "https://hooks.zapier.com/hooks/catch/6984728/uo78v01/";
+  const uuid = localStorage.getItem("visitUUID") || (() => {
+    const id = crypto.randomUUID();
+    localStorage.setItem("visitUUID", id); return id;
+  })();
 
-      if (profileCache.email) {
-        greeting.innerText = "Welcome back, " + profileCache.firstName + "!";
-        visitCount += 1;
-        localStorage.setItem('visitCount', visitCount);
-        logVisit(profileCache);
-      } else {
-        profileForm.classList.remove('hidden');
-      }
+  const store = new URLSearchParams(window.location.search).get("store") || "unknown";
+  let visitCount = parseInt(localStorage.getItem('visitCount') || "0");
 
-      profileForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const data = {
-          firstName: profileForm.firstName.value.trim(),
-          lastName: profileForm.lastName.value.trim(),
-          email: profileForm.email.value.trim(),
-          optIn: profileForm.optIn.checked
-        };
-        localStorage.setItem('profileData', JSON.stringify(data));
-        visitCount += 1;
-        localStorage.setItem('visitCount', visitCount);
-        greeting.innerText = "Thanks, " + data.firstName + "!";
-        profileForm.classList.add('hidden');
-        logVisit(data);
-      });
+  const questionIndex = parseInt(localStorage.getItem('questionIndex') || "0");
+  const questions = [
+    {
+      key: "visitFrequency",
+      text: "How often do you visit our stores?",
+      options: ["First time", "Once a month", "A few times a month", "Weekly", "More than once a week"]
+    },
+    {
+      key: "otherStores",
+      text: "Do you shop at our other locations?",
+      options: ["Yes", "No", "Sometimes"]
+    },
+    {
+      key: "purchaseType",
+      text: "What do you usually buy here?",
+      options: ["Beer", "Wine", "Spirits", "Cider/Coolers", "Snacks", "Other"]
+    },
+    {
+      key: "avgSpend",
+      text: "About how much do you usually spend per visit?",
+      options: ["Under $20", "$20-$50", "$50-$100", "Over $100"]
+    }
+  ];
 
-      async function logVisit(profile) {
-        const payload = {
-          uuid,
-          store,
-          timestamp: new Date().toISOString(),
-          visitCount,
-          firstName: profile.firstName || "",
-          lastName: profile.lastName || "",
-          email: profile.email || "",
-          optIn: profile.optIn || false
-        };
-        fetch(webhook, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        }).catch(err => console.error(err));
-      }
-    })();
-  </script>
+  const profileCache = JSON.parse(localStorage.getItem("profileData") || "{}");
+  const profileForm = document.getElementById('profileForm');
+  const greeting = document.getElementById('greeting');
+  const questionContainer = document.getElementById('questionContainer');
+
+  if (profileCache.email) {
+    // Returning visitor
+    greeting.innerText = "Welcome back, " + profileCache.firstName + "!";
+    visitCount += 1;
+    localStorage.setItem('visitCount', visitCount);
+    logVisit(profileCache);
+
+    // Show progressive profiling question
+    const q = questions[questionIndex % questions.length];
+    const formHtml = `<form id="progressForm">
+      <label>${q.text}</label>
+      ${q.options.map(o => `<label><input type="radio" name="answer" value="${o}" required> ${o}</label>`).join('')}
+      <button type="submit">Submit</button>
+    </form>`;
+    questionContainer.innerHTML = formHtml;
+    questionContainer.classList.remove('hidden');
+
+    document.getElementById('progressForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const answer = document.querySelector('input[name="answer"]:checked').value;
+
+      // Save locally (optional)
+      const answers = JSON.parse(localStorage.getItem('answers') || "{}");
+      answers[q.key] = answer;
+      localStorage.setItem('answers', JSON.stringify(answers));
+
+      // Send to Zapier
+      const payload = {
+        uuid,
+        question: q.key,
+        answer,
+        timestamp: new Date().toISOString(),
+        store
+      };
+      fetch(webhook, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }).catch(err => console.error(err));
+
+      // Increment questionIndex
+      localStorage.setItem('questionIndex', questionIndex + 1);
+
+      // Thank you message
+      questionContainer.innerHTML = "<p>Thank you for your answer!</p>";
+    });
+
+  } else {
+    // First-time visitor: show profile form
+    profileForm.classList.remove('hidden');
+  }
+
+  profileForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {
+      firstName: profileForm.firstName.value.trim(),
+      lastName: profileForm.lastName.value.trim(),
+      email: profileForm.email.value.trim(),
+      optIn: profileForm.optIn.checked
+    };
+    localStorage.setItem('profileData', JSON.stringify(data));
+    visitCount += 1;
+    localStorage.setItem('visitCount', visitCount);
+    greeting.innerText = "Thanks, " + data.firstName + "!";
+    profileForm.classList.add('hidden');
+
+    logVisit(data);
+    location.reload(); // reload to show first progressive question after registration
+  });
+
+  async function logVisit(profile) {
+    const payload = {
+      uuid,
+      store,
+      timestamp: new Date().toISOString(),
+      visitCount,
+      firstName: profile.firstName || "",
+      lastName: profile.lastName || "",
+      email: profile.email || "",
+      optIn: profile.optIn || false
+    };
+    fetch(webhook, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).catch(err => console.error(err));
+  }
+})();
+</script>
 </body>
 </html>
