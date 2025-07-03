@@ -134,7 +134,7 @@
         return id;
       })();
 
-      let store = "unknown";
+      let store = window.location.pathname;
 const queryStore = new URLSearchParams(window.location.search).get("store");
 const path = window.location.pathname;
 
