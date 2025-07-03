@@ -138,20 +138,7 @@
 const queryStore = new URLSearchParams(window.location.search).get("store");
 const path = window.location.pathname;
 
-if (queryStore) {
-  store = queryStore;
-} else {
-  // Path-based store detection
-  if (path.includes("courtenay")) {
-    store = "courtenay";
-  } else if (path.includes("port-alberni")) {
-    store = "port-alberni";
-  } else if (path.includes("general")) {
-    store = "general";
-  } else {
-    store = "Changes";
-  }
-}
+
 
 // Store the detected store value for consistency
 localStorage.setItem("storeName", store);
