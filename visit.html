@@ -138,7 +138,6 @@
 const queryStore = new URLSearchParams(window.location.search).get("store");
 const path = window.location.pathname.toLowerCase();
 
-// Check for ?store= value
 if (queryStore) {
   store = queryStore;
 } else {
@@ -150,7 +149,7 @@ if (queryStore) {
   } else if (path.includes("general")) {
     store = "general";
   } else {
-    store = "unknown";
+    store = "Test";
   }
 }
 
