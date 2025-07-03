@@ -6,16 +6,6 @@
   <title>Enter Below</title>
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet" />
   <style>
-    :root {
-      --accent: #339999;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
     body {
       font-family: 'Source Sans 3', sans-serif;
       background-color: #fff;
@@ -28,7 +18,7 @@
     h1 {
       font-size: 1.75rem;
       margin-bottom: 2rem;
-      color: var(--accent);
+      color: #339999;
       text-align: center;
       font-weight: 600;
     }
@@ -53,13 +43,6 @@
       padding: 0.4rem 0;
       background: transparent;
       color: #111;
-      transition: border-color 0.2s ease;
-    }
-
-    input[type="text"]:focus,
-    input[type="email"]:focus {
-      border-color: var(--accent);
-      outline: none;
     }
 
     .checkbox-wrapper {
@@ -70,22 +53,14 @@
     }
 
     input[type="checkbox"] {
-      accent-color: var(--accent);
+      accent-color: #339999;
       width: 1.1rem;
       height: 1.1rem;
       margin-right: 0.5rem;
-      transition: accent-color 0.3s ease, transform 0.2s ease;
-      cursor: pointer;
-      background-color: #fff;
-      border-radius: 3px;
-    }
-
-    input[type="checkbox"]:hover {
-      transform: scale(1.1);
     }
 
     button {
-      background-color: var(--accent);
+      background-color: #339999;
       color: #fff;
       border: none;
       border-radius: 4px;
@@ -93,52 +68,10 @@
       font-size: 1rem;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.3s ease;
-    }
-
-    button:hover {
-      background-color: #2a7f7f;
     }
 
     .hidden {
       display: none;
-    }
-
-    #questionContainer {
-      margin-top: 2rem;
-    }
-
-    #questionContainer form {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    #questionContainer form > label:first-of-type {
-      font-size: 1.2rem;
-      font-weight: 600;
-      color: var(--accent);
-      margin-bottom: 0.5rem;
-    }
-
-    #questionContainer label {
-      display: flex;
-      align-items: center;
-      font-size: 0.95rem;
-      font-weight: 400;
-    }
-
-    #questionContainer input[type="radio"] {
-      margin-right: 0.5rem;
-      accent-color: var(--accent);
-    }
-
-    #questionContainer p {
-      font-size: 1rem;
-      color: var(--accent);
-      font-weight: 600;
-      text-align: center;
-      margin-top: 2rem;
     }
   </style>
 </head>
@@ -162,8 +95,6 @@
       <input id="email" name="email" type="email" required />
     </div>
 
-    <input type="hidden" id="storeInput" name="store" />
-
     <div class="checkbox-wrapper">
       <input id="optIn" name="optIn" type="checkbox" checked />
       <label for="optIn">Yes, I want to receive emails</label>
@@ -171,8 +102,6 @@
 
     <button type="submit">Submit</button>
   </form>
-
-  <div id="questionContainer" class="hidden"></div>
 
   <script>
     (async function () {
@@ -183,109 +112,60 @@
         return id;
       })();
 
+      // Detect store from URL param early
       let store = "unknown";
-      const storeParam = new URLSearchParams(window.location.search).get("store");
-      if (storeParam) {
-        store = storeParam;
-        localStorage.setItem("storeName", storeParam);
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("store")) {
+        store = params.get("store").toLowerCase();
+        localStorage.setItem("storeName", store);
       } else {
-        const cachedStore = localStorage.getItem("storeName");
-        if (cachedStore) store = cachedStore;
+        const cached = localStorage.getItem("storeName");
+        if (cached) store = cached;
       }
-      document.getElementById("storeInput").value = store;
 
       let visitCount = parseInt(localStorage.getItem("visitCount") || "0");
-      const questionIndex = parseInt(localStorage.getItem("questionIndex") || "0");
-
-      const questions = [
-        {
-          key: "visitFrequency",
-          text: "How often do you visit our stores?",
-          options: ["First time", "Once a month", "A few times a month", "Weekly", "More than once a week"]
-        }
-      ];
-
-      const profileCache = JSON.parse(localStorage.getItem("profileData") || "{}");
-      const profileForm = document.getElementById("profileForm");
+      const profileData = JSON.parse(localStorage.getItem("profileData") || "{}");
       const greeting = document.getElementById("greeting");
-      const questionContainer = document.getElementById("questionContainer");
+      const form = document.getElementById("profileForm");
 
-      if (profileCache.email) {
-        greeting.innerText = "Welcome back, " + profileCache.firstName + "!";
-        visitCount += 1;
+      if (profileData.email) {
+        visitCount++;
         localStorage.setItem("visitCount", visitCount);
-        logVisit(profileCache);
-
-        const q = questions[questionIndex % questions.length];
-        const formHtml = `<form id="progressForm">
-          <label>${q.text}</label>
-          ${q.options.map(o => `<label><input type="radio" name="answer" value="${o}" required> ${o}</label>`).join("")}
-          <button type="submit">Submit</button>
-        </form>`;
-        questionContainer.innerHTML = formHtml;
-        questionContainer.classList.remove("hidden");
-
-        document.getElementById("progressForm").addEventListener("submit", (e) => {
-          e.preventDefault();
-          const answer = document.querySelector('input[name="answer"]:checked').value;
-          const answers = JSON.parse(localStorage.getItem("answers") || "{}");
-          answers[q.key] = answer;
-          localStorage.setItem("answers", JSON.stringify(answers));
-
-          const payload = {
-            uuid,
-            question: q.key,
-            answer,
-            timestamp: new Date().toISOString(),
-            store,
-            visitCount
-          };
-          fetch(webhook, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
-
-          localStorage.setItem("questionIndex", questionIndex + 1);
-          questionContainer.innerHTML = "<p>Thank you for your answer!</p>";
-        });
+        greeting.innerText = `Welcome back, ${profileData.firstName}!`;
+        logToZapier(profileData);
       } else {
-        profileForm.classList.remove("hidden");
+        form.classList.remove("hidden");
       }
 
-      profileForm.addEventListener("submit", async (e) => {
+      form.addEventListener("submit", async (e) => {
         e.preventDefault();
         const data = {
-          firstName: profileForm.firstName.value.trim(),
-          lastName: profileForm.lastName.value.trim(),
-          email: profileForm.email.value.trim(),
-          optIn: profileForm.optIn.checked
+          firstName: form.firstName.value.trim(),
+          lastName: form.lastName.value.trim(),
+          email: form.email.value.trim(),
+          optIn: form.optIn.checked
         };
         localStorage.setItem("profileData", JSON.stringify(data));
-        visitCount += 1;
+        visitCount++;
         localStorage.setItem("visitCount", visitCount);
-        greeting.innerText = "Thanks, " + data.firstName + "!";
-        profileForm.classList.add("hidden");
-
-        logVisit(data);
-        location.reload();
+        greeting.innerText = `Thanks, ${data.firstName}!`;
+        form.classList.add("hidden");
+        logToZapier(data);
       });
 
-      async function logVisit(profile) {
+      function logToZapier(profile) {
         const payload = {
           uuid,
+          email: profile.email,
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          optIn: profile.optIn,
           store,
           timestamp: new Date().toISOString(),
-          visitCount,
-          firstName: profile.firstName || "",
-          lastName: profile.lastName || "",
-          email: profile.email || "",
-          optIn: profile.optIn || false
+          visitCount
         };
         fetch(webhook, {
           method: "POST",
-          mode: "no-cors",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
