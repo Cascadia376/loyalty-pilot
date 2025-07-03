@@ -162,6 +162,8 @@
       <input id="email" name="email" type="email" required />
     </div>
 
+    <input type="hidden" id="storeInput" name="store" />
+
     <div class="checkbox-wrapper">
       <input id="optIn" name="optIn" type="checkbox" checked />
       <label for="optIn">Yes, I want to receive emails</label>
@@ -181,7 +183,17 @@
         return id;
       })();
 
-      const store = new URLSearchParams(window.location.search).get("store") || "unknown";
+      let store = "unknown";
+      const storeParam = new URLSearchParams(window.location.search).get("store");
+      if (storeParam) {
+        store = storeParam;
+        localStorage.setItem("storeName", storeParam);
+      } else {
+        const cachedStore = localStorage.getItem("storeName");
+        if (cachedStore) store = cachedStore;
+      }
+      document.getElementById("storeInput").value = store;
+
       let visitCount = parseInt(localStorage.getItem("visitCount") || "0");
       const questionIndex = parseInt(localStorage.getItem("questionIndex") || "0");
 
@@ -190,21 +202,6 @@
           key: "visitFrequency",
           text: "How often do you visit our stores?",
           options: ["First time", "Once a month", "A few times a month", "Weekly", "More than once a week"]
-        },
-        {
-          key: "otherStores",
-          text: "Do you shop at our other locations?",
-          options: ["Yes", "No", "Sometimes"]
-        },
-        {
-          key: "purchaseType",
-          text: "What do you usually buy here?",
-          options: ["Beer", "Wine", "Spirits", "Cider/Coolers", "Other"]
-        },
-        {
-          key: "avgSpend",
-          text: "About how much do you usually spend per visit?",
-          options: ["Under $20", "$20-$50", "$50-$100", "Over $100"]
         }
       ];
 
@@ -240,7 +237,8 @@
             question: q.key,
             answer,
             timestamp: new Date().toISOString(),
-            store
+            store,
+            visitCount
           };
           fetch(webhook, {
             method: "POST",
@@ -294,6 +292,5 @@
       }
     })();
   </script>
-
 </body>
 </html>
