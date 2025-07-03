@@ -147,11 +147,7 @@
         store = "general";
       } else if (path.includes("port-alberni")) {
         store = "port-alberni";
-      } else if (path.includes("kamloops")) {
-        store = "kamloops";
-      } else if (path.includes("sauna")) {
-        store = "sauna-campaign";
-      }
+      } 
 
       const cachedStore = localStorage.getItem("storeName");
       if (!cachedStore || cachedStore !== store) {
