@@ -181,7 +181,19 @@
         return id;
       })();
 
-      const store = new URLSearchParams(window.location.search).get("store") || "unknown";
+      let store = "unknown";
+const urlStore = new URLSearchParams(window.location.search).get("store");
+
+if (urlStore) {
+  store = urlStore.toLowerCase();
+  localStorage.setItem("storeName", store);
+} else {
+  const savedStore = localStorage.getItem("storeName");
+  if (savedStore) {
+    store = savedStore;
+  }
+}
+
       let visitCount = parseInt(localStorage.getItem("visitCount") || "0");
       const questionIndex = parseInt(localStorage.getItem("questionIndex") || "0");
 
