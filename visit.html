@@ -136,7 +136,7 @@
 
       let store = "unknown";
 const queryStore = new URLSearchParams(window.location.search).get("store");
-const path = window.location.pathname.toLowerCase();
+const path = window.location.pathname;
 
 if (queryStore) {
   store = queryStore;
