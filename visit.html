@@ -134,8 +134,31 @@
       return id;
     })();
 
-let store = window.location.href;
-localStorage.setItem("storeName", store);
+let store = "unknown";
+
+// Listen for postMessage from parent
+window.addEventListener("message", function (event) {
+  if (event.data && event.data.pageUrl) {
+    try {
+      const url = new URL(event.data.pageUrl);
+      const slug = url.pathname.split("/").pop(); // e.g., 'in-store-giveaway-kamloops'
+      store = slug || "unknown";
+      localStorage.setItem("storeName", store);
+      console.log("✅ Received and stored parent page URL slug:", store);
+    } catch (err) {
+      console.error("❌ Failed to parse pageUrl:", err);
+    }
+  }
+});
+
+// Fallback in case message doesn’t arrive
+if (store === "unknown") {
+  const cached = localStorage.getItem("storeName");
+  if (cached) {
+    store = cached;
+    console.log("🧩 Using fallback from localStorage:", store);
+  }
+}
 
 
 
