@@ -138,6 +138,7 @@ let store = "unknown";
 
 window.addEventListener("message", function (event) {
 
+   let store = urlParts;
   if (event.data && event.data.pageUrl) {
     try {
       const urlParts = new URL(event.data.pageUrl);
