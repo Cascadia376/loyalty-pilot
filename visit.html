@@ -137,8 +137,6 @@
 let store = "unknown";
 
 window.addEventListener("message", function (event) {
-  // Optional: Validate origin
-  if (event.origin !== "https://cascadialiquor.com") return;
 
   if (event.data && event.data.pageUrl) {
     try {
