@@ -125,133 +125,110 @@
 
   <div id="questionContainer" class="hidden"></div>
 
-  <script>
-    (async function () {
-      const webhook = "https://hooks.zapier.com/hooks/catch/6984728/uo78v01/";
-      const uuid = localStorage.getItem("visitUUID") || (() => {
-        const id = crypto.randomUUID();
-        localStorage.setItem("visitUUID", id);
-        return id;
-      })();
+ <script>
+  (async function () {
+    const webhook = "https://hooks.zapier.com/hooks/catch/6984728/uo78v01/";
+    const uuid = localStorage.getItem("visitUUID") || (() => {
+      const id = crypto.randomUUID();
+      localStorage.setItem("visitUUID", id);
+      return id;
+    })();
 
-      window.addEventListener("message", function(event) {
-  if (event.data && event.data.pageUrl) {
-    const storeUrl = event.data.pageUrl;
-    localStorage.setItem("storeName", storeUrl);
+    let store = "unknown"; // default value in case no postMessage is received
 
-    // You can also send it in the webhook later:
-    // payload.store = storeUrl;
-  }
-});
-
-      const urlParts = new URL(storeUrl);
-const storeSlug = urlParts.pathname.split('/').pop(); // gives 'in-store-giveaway-kamloops'
-
-
-      
-
-      let visitCount = parseInt(localStorage.getItem("visitCount") || "0") + 1;
-      localStorage.setItem("visitCount", visitCount);
-
-      const questionIndex = parseInt(localStorage.getItem("questionIndex") || "0");
-
-      const questions = [
-        {
-          key: "visitFrequency",
-          text: "How often do you visit our stores?",
-          options: ["First time", "Once a month", "A few times a month", "Weekly", "More than once a week"]
-        },
-        {
-          key: "otherStores",
-          text: "Do you shop at our other locations?",
-          options: ["Yes", "No", "Sometimes"]
-        },
-        {
-          key: "purchaseType",
-          text: "What do you usually buy here?",
-          options: ["Beer", "Wine", "Spirits", "Cider/Coolers", "Other"]
-        },
-        {
-          key: "avgSpend",
-          text: "About how much do you usually spend per visit?",
-          options: ["Under $20", "$20-$50", "$50-$100", "Over $100"]
+    // Listen for parent page URL via postMessage
+    window.addEventListener("message", function (event) {
+      if (event.data && event.data.pageUrl) {
+        try {
+          const urlParts = new URL(event.data.pageUrl);
+          const storeSlug = urlParts.pathname.split('/').pop(); // e.g., "in-store-giveaway-kamloops"
+          store = storeSlug;
+          localStorage.setItem("storeName", storeSlug);
+        } catch (err) {
+          console.error("Failed to parse parent page URL:", err);
         }
-      ];
-
-      const profileCache = JSON.parse(localStorage.getItem("profileData") || "{}");
-      const profileForm = document.getElementById("profileForm");
-      const greeting = document.getElementById("greeting");
-      const questionContainer = document.getElementById("questionContainer");
-
-      if (profileCache.email) {
-        greeting.innerText = "Welcome back, " + profileCache.firstName + "!";
-        logVisit(profileCache);
-        showQuestion();
-      } else {
-        profileForm.classList.remove("hidden");
       }
+    });
 
-      profileForm.addEventListener("submit", async (e) => {
+    let visitCount = parseInt(localStorage.getItem("visitCount") || "0") + 1;
+    localStorage.setItem("visitCount", visitCount);
+
+    const questionIndex = parseInt(localStorage.getItem("questionIndex") || "0");
+
+    const questions = [
+      {
+        key: "visitFrequency",
+        text: "How often do you visit our stores?",
+        options: ["First time", "Once a month", "A few times a month", "Weekly", "More than once a week"]
+      },
+      {
+        key: "otherStores",
+        text: "Do you shop at our other locations?",
+        options: ["Yes", "No", "Sometimes"]
+      },
+      {
+        key: "purchaseType",
+        text: "What do you usually buy here?",
+        options: ["Beer", "Wine", "Spirits", "Cider/Coolers", "Other"]
+      },
+      {
+        key: "avgSpend",
+        text: "About how much do you usually spend per visit?",
+        options: ["Under $20", "$20-$50", "$50-$100", "Over $100"]
+      }
+    ];
+
+    const profileCache = JSON.parse(localStorage.getItem("profileData") || "{}");
+    const profileForm = document.getElementById("profileForm");
+    const greeting = document.getElementById("greeting");
+    const questionContainer = document.getElementById("questionContainer");
+
+    if (profileCache.email) {
+      greeting.innerText = "Welcome back, " + profileCache.firstName + "!";
+      logVisit(profileCache);
+      showQuestion();
+    } else {
+      profileForm.classList.remove("hidden");
+    }
+
+    profileForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const data = {
+        firstName: profileForm.firstName.value.trim(),
+        lastName: profileForm.lastName.value.trim(),
+        email: profileForm.email.value.trim(),
+        optIn: profileForm.optIn.checked
+      };
+      localStorage.setItem("profileData", JSON.stringify(data));
+      greeting.innerText = "Thanks, " + data.firstName + "!";
+      profileForm.classList.add("hidden");
+      logVisit(data);
+      showQuestion();
+    });
+
+    function showQuestion() {
+      const q = questions[questionIndex % questions.length];
+      const formHtml = `<form id="progressForm">
+        <label>${q.text}</label>
+        ${q.options.map(o => `<label><input type="radio" name="answer" value="${o}" required> ${o}</label>`).join("")}
+        <button type="submit">Submit</button>
+      </form>`;
+      questionContainer.innerHTML = formHtml;
+      questionContainer.classList.remove("hidden");
+
+      document.getElementById("progressForm").addEventListener("submit", (e) => {
         e.preventDefault();
-        const data = {
-          firstName: profileForm.firstName.value.trim(),
-          lastName: profileForm.lastName.value.trim(),
-          email: profileForm.email.value.trim(),
-          optIn: profileForm.optIn.checked
-        };
-        localStorage.setItem("profileData", JSON.stringify(data));
-        greeting.innerText = "Thanks, " + data.firstName + "!";
-        profileForm.classList.add("hidden");
-        logVisit(data);
-        showQuestion();
-      });
+        const answer = document.querySelector('input[name="answer"]:checked').value;
+        const answers = JSON.parse(localStorage.getItem("answers") || "{}");
+        answers[q.key] = answer;
+        localStorage.setItem("answers", JSON.stringify(answers));
 
-      function showQuestion() {
-        const q = questions[questionIndex % questions.length];
-        const formHtml = `<form id="progressForm">
-          <label>${q.text}</label>
-          ${q.options.map(o => `<label><input type="radio" name="answer" value="${o}" required> ${o}</label>`).join("")}
-          <button type="submit">Submit</button>
-        </form>`;
-        questionContainer.innerHTML = formHtml;
-        questionContainer.classList.remove("hidden");
-
-        document.getElementById("progressForm").addEventListener("submit", (e) => {
-          e.preventDefault();
-          const answer = document.querySelector('input[name="answer"]:checked').value;
-          const answers = JSON.parse(localStorage.getItem("answers") || "{}");
-          answers[q.key] = answer;
-          localStorage.setItem("answers", JSON.stringify(answers));
-
-          const payload = {
-            uuid,
-            question: q.key,
-            answer,
-            timestamp: new Date().toISOString(),
-            store
-          };
-          fetch(webhook, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
-
-          localStorage.setItem("questionIndex", questionIndex + 1);
-          questionContainer.innerHTML = "<p>Thank you for your answer!</p>";
-        });
-      }
-
-      function logVisit(profile) {
         const payload = {
           uuid,
-          store,
+          question: q.key,
+          answer,
           timestamp: new Date().toISOString(),
-          visitCount,
-          firstName: profile.firstName || "",
-          lastName: profile.lastName || "",
-          email: profile.email || "",
-          optIn: profile.optIn || false
+          store
         };
         fetch(webhook, {
           method: "POST",
@@ -259,8 +236,31 @@ const storeSlug = urlParts.pathname.split('/').pop(); // gives 'in-store-giveawa
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
-      }
-    })();
-  </script>
+
+        localStorage.setItem("questionIndex", questionIndex + 1);
+        questionContainer.innerHTML = "<p>Thank you for your answer!</p>";
+      });
+    }
+
+    function logVisit(profile) {
+      const payload = {
+        uuid,
+        store,
+        timestamp: new Date().toISOString(),
+        visitCount,
+        firstName: profile.firstName || "",
+        lastName: profile.lastName || "",
+        email: profile.email || "",
+        optIn: profile.optIn || false
+      };
+      fetch(webhook, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+    }
+  })();
+</script>
 </body>
 </html>
