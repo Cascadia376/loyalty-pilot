@@ -136,29 +136,31 @@
 
 let store = "unknown";
 
-// Listen for postMessage from parent
-window.addEventListener("message", function (event) {
-  if (event.data && event.data.pageUrl) {
-    try {
-      const url = new URL(event.data.pageUrl);
-      const slug = url.pathname.split("/").pop(); // e.g., 'in-store-giveaway-kamloops'
-      store = slug || "unknown";
-      localStorage.setItem("storeName", store);
-      console.log("✅ Received and stored parent page URL slug:", store);
-    } catch (err) {
-      console.error("❌ Failed to parse pageUrl:", err);
-    }
-  }
-});
+// Try to get from query param
+const params = new URLSearchParams(window.location.search);
+const sourceUrl = params.get("source");
 
-// Fallback in case message doesn’t arrive
-if (store === "unknown") {
+if (sourceUrl) {
+  try {
+    const parsed = new URL(sourceUrl);
+    const slug = parsed.pathname.split("/").pop();
+    store = slug || "unknown";
+    localStorage.setItem("storeName", store);
+    console.log("🪄 Store from query param:", store);
+  } catch (e) {
+    console.error("❌ Failed to parse query param source:", e);
+  }
+} else {
+  // fallback from localStorage
   const cached = localStorage.getItem("storeName");
   if (cached) {
     store = cached;
-    console.log("🧩 Using fallback from localStorage:", store);
+    console.log("🧩 Fallback from localStorage:", store);
+  } else {
+    console.warn("⚠️ No store info available, using 'unknown'");
   }
 }
+
 
 
 
