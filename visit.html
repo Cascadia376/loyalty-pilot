@@ -134,28 +134,34 @@
       return id;
     })();
 
-let store = "unknown";
+// Try to get it from localStorage first
+    const cached = localStorage.getItem("storeName");
+    if (cached) {
+      console.log("📦 Using cached store:", cached);
+      resolved = true;
+      return resolve(cached);
+    }
 
-window.addEventListener("message", function (event) {
-  console.log("📩 Received postMessage", event.data, "from", event.origin);
+    // Wait for parent to send pageUrl
+    const listener = function (event) {
+      if (!event.data || !event.data.pageUrl) return;
 
-  // OPTIONAL: if you want strict origin check
-  if (!event.data || !event.data.pageUrl) return;
+      try {
+        const url = new URL(event.data.pageUrl);
+        const slug = url.pathname.split("/").pop();
+        localStorage.setItem("storeName", slug);
+        console.log("✅ Store slug received from parent:", slug);
 
-  try {
-    const url = new URL(event.data.pageUrl);
-    const slug = url.pathname.split("/").pop(); // last part of URL path
-    store = slug;
-    localStorage.setItem("storeName", slug);
-    console.log("✅ Store slug set to:", store);
-  } catch (e) {
-    console.error("❌ Error parsing pageUrl:", e);
-  }
-});
-if (store === "unknown") {
-  store = localStorage.getItem("storeName") || "fallback-default";
-  console.log("⛑️ Fallback store from localStorage:", store);
-}
+        window.removeEventListener("message", listener);
+        resolved = true;
+        resolve(slug);
+      } catch (err) {
+        console.error("❌ Error parsing parent URL:", err);
+        resolve("fallback-default");
+      }
+    };
+
+    window.addEventListener("message", listener);
 
 
 
