@@ -134,25 +134,34 @@
       return id;
     })();
 
-    // 🧠 Get source from URL param (?source=...)
-    let store = "unknown";
-    const params = new URLSearchParams(window.location.search);
-    const sourceUrl = params.get("source");
+  // 🧠 Get source from URL param (?source=...)
+let store = "unknown";
+const params = new URLSearchParams(window.location.search);
+const sourceUrl = params.get("source");
 
-    if (sourceUrl) {
-      try {
-        const parsed = new URL(sourceUrl);
-        const slug = parsed.pathname.split("/").pop();
-        store = slug;
-        localStorage.setItem("storeName", slug);
-        console.log("🎯 Got store from ?source param:", store);
-      } catch (e) {
-        console.error("❌ Error parsing ?source:", e);
-      }
+if (sourceUrl) {
+  try {
+    const parsed = new URL(sourceUrl);
+    const urlPath = parsed.pathname.toLowerCase(); // Make it case-insensitive
+
+    if (urlPath.includes("general-in-store-giveaway-kamloops-getaway")) {
+      store = "General - Kamloops";
+    } else if (urlPath.includes("courtenay")) {
+      store = "Courtenay";
     } else {
-      store = localStorage.getItem("storeName") || "fallback-default";
-      console.log("🧩 Using fallback from localStorage:", store);
+      store = "Port Alberni";
     }
+
+    localStorage.setItem("storeName", store);
+    console.log("🎯 Got store from ?source param:", store);
+  } catch (e) {
+    console.error("❌ Error parsing ?source:", e);
+  }
+} else {
+  store = localStorage.getItem("storeName") || "Port Alberni";
+  console.log("🧩 Using fallback from localStorage:", store);
+}
+
 
 
 
