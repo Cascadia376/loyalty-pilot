@@ -143,6 +143,7 @@ window.addEventListener("message", function (event) {
       const urlParts = new URL(event.data.pageUrl);
       const slug = urlParts.pathname.split("/").pop(); // get 'in-store-giveaway-kamloops'
       store = slug;
+      let store = urlParts;
       localStorage.setItem("storeName", store);
       console.log("✅ Received store from parent:", store);
     } catch (e) {
