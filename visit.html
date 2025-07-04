@@ -125,7 +125,7 @@
 
   <div id="questionContainer" class="hidden"></div>
 
- <script>
+<script>
   (async function () {
     const webhook = "https://hooks.zapier.com/hooks/catch/6984728/uo78v01/";
     const uuid = localStorage.getItem("visitUUID") || (() => {
@@ -134,30 +134,26 @@
       return id;
     })();
 
-let store = "unknown";
+    // 🧠 Get source from URL param (?source=...)
+    let store = "unknown";
+    const params = new URLSearchParams(window.location.search);
+    const sourceUrl = params.get("source");
 
-const params = new URLSearchParams(window.location.search);
-const sourceUrl = params.get("source");
+    if (sourceUrl) {
+      try {
+        const parsed = new URL(sourceUrl);
+        const slug = parsed.pathname.split("/").pop();
+        store = slug;
+        localStorage.setItem("storeName", slug);
+        console.log("🎯 Got store from ?source param:", store);
+      } catch (e) {
+        console.error("❌ Error parsing ?source:", e);
+      }
+    } else {
+      store = localStorage.getItem("storeName") || "fallback-default";
+      console.log("🧩 Using fallback from localStorage:", store);
+    }
 
-if (sourceUrl) {
-  try {
-    const parsed = new URL(sourceUrl);
-    const slug = parsed.pathname.split("/").pop(); // e.g., general-in-store-giveaway-kamloops-getaway
-    store = slug;
-    localStorage.setItem("storeName", slug);
-    console.log("🎯 Store from query param:", store);
-  } catch (e) {
-    console.error("❌ Failed to parse query param:", e);
-  }
-} else {
-  const cached = localStorage.getItem("storeName");
-  if (cached) {
-    store = cached;
-    console.log("🧩 Fallback from localStorage:", store);
-  } else {
-    console.warn("⚠️ No store info available, using 'unknown'");
-  }
-}
 
 
     let visitCount = parseInt(localStorage.getItem("visitCount") || "0") + 1;
