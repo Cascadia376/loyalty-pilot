@@ -136,36 +136,22 @@
 
 let store = "unknown";
 
-// A Promise that resolves when we get the parent URL
-function waitForStoreFromParent(timeout = 1000) {
-  return new Promise((resolve) => {
-    const handleMessage = (event) => {
-      if (event.data && event.data.pageUrl) {
-        try {
-          const urlParts = new URL(event.data.pageUrl);
-          const storeSlug = urlParts.pathname.split('/').pop();
-          store = storeSlug;
-          localStorage.setItem("storeName", storeSlug);
-          window.removeEventListener("message", handleMessage);
-          resolve(storeSlug);
-        } catch (err) {
-          console.error("Failed to parse page URL", err);
-          resolve("unknown");
-        }
-      }
-    };
+window.addEventListener("message", function (event) {
+  // Optional: Validate origin
+  if (event.origin !== "https://cascadialiquor.com") return;
 
-    window.addEventListener("message", handleMessage);
-
-    // Fallback: if no message is received in X ms, proceed anyway
-    setTimeout(() => {
-      store = localStorage.getItem("storeName") || "unknown";
-      resolve(store);
-    }, timeout);
-  });
-}
-
-
+  if (event.data && event.data.pageUrl) {
+    try {
+      const urlParts = new URL(event.data.pageUrl);
+      const slug = urlParts.pathname.split("/").pop(); // get 'in-store-giveaway-kamloops'
+      store = slug;
+      localStorage.setItem("storeName", store);
+      console.log("✅ Received store from parent:", store);
+    } catch (e) {
+      console.error("URL parsing error:", e);
+    }
+  }
+});
 
     let visitCount = parseInt(localStorage.getItem("visitCount") || "0") + 1;
     localStorage.setItem("visitCount", visitCount);
