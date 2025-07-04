@@ -134,24 +134,37 @@
       return id;
     })();
 
-let store = localStorage.getItem("storeName") || "unknown";
+let store = "unknown";
 
-// Listen for parent page URL via postMessage
-window.addEventListener("message", function (event) {
-  if (event.data && event.data.pageUrl) {
-    try {
-      const urlParts = new URL(event.data.pageUrl);
-      const storeSlug = urlParts.pathname.split('/').pop(); // e.g., "in-store-giveaway-kamloops"
+// A Promise that resolves when we get the parent URL
+function waitForStoreFromParent(timeout = 1000) {
+  return new Promise((resolve) => {
+    const handleMessage = (event) => {
+      if (event.data && event.data.pageUrl) {
+        try {
+          const urlParts = new URL(event.data.pageUrl);
+          const storeSlug = urlParts.pathname.split('/').pop();
+          store = storeSlug;
+          localStorage.setItem("storeName", storeSlug);
+          window.removeEventListener("message", handleMessage);
+          resolve(storeSlug);
+        } catch (err) {
+          console.error("Failed to parse page URL", err);
+          resolve("unknown");
+        }
+      }
+    };
 
-      store = storeSlug;
-      localStorage.setItem("storeName", storeSlug);
-      localStorage.setItem("pageUrl", event.data.pageUrl); // optional: store full URL
-      console.log("Store set from postMessage:", storeSlug);
-    } catch (err) {
-      console.error("Failed to parse parent page URL:", err);
-    }
-  }
-});
+    window.addEventListener("message", handleMessage);
+
+    // Fallback: if no message is received in X ms, proceed anyway
+    setTimeout(() => {
+      store = localStorage.getItem("storeName") || "unknown";
+      resolve(store);
+    }, timeout);
+  });
+}
+
 
 
     let visitCount = parseInt(localStorage.getItem("visitCount") || "0") + 1;
