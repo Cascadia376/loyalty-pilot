@@ -134,10 +134,21 @@
         return id;
       })();
 
-      let store = window.location.href;
-      
+      window.addEventListener("message", function(event) {
+  if (event.data && event.data.pageUrl) {
+    const storeUrl = event.data.pageUrl;
+    localStorage.setItem("storeName", storeUrl);
 
-localStorage.setItem("storeName", store);
+    // You can also send it in the webhook later:
+    // payload.store = storeUrl;
+  }
+});
+
+      const urlParts = new URL(storeUrl);
+const storeSlug = urlParts.pathname.split('/').pop(); // gives 'in-store-giveaway-kamloops'
+
+
+      
 
       let visitCount = parseInt(localStorage.getItem("visitCount") || "0") + 1;
       localStorage.setItem("visitCount", visitCount);
