@@ -136,22 +136,20 @@
 
 let store = "unknown";
 
-// Try to get from query param
 const params = new URLSearchParams(window.location.search);
 const sourceUrl = params.get("source");
 
 if (sourceUrl) {
   try {
     const parsed = new URL(sourceUrl);
-    const slug = parsed.pathname.split("/").pop();
-    store = slug || "unknown";
-    localStorage.setItem("storeName", store);
-    console.log("🪄 Store from query param:", store);
+    const slug = parsed.pathname.split("/").pop(); // e.g., general-in-store-giveaway-kamloops-getaway
+    store = slug;
+    localStorage.setItem("storeName", slug);
+    console.log("🎯 Store from query param:", store);
   } catch (e) {
-    console.error("❌ Failed to parse query param source:", e);
+    console.error("❌ Failed to parse query param:", e);
   }
 } else {
-  // fallback from localStorage
   const cached = localStorage.getItem("storeName");
   if (cached) {
     store = cached;
@@ -160,8 +158,6 @@ if (sourceUrl) {
     console.warn("⚠️ No store info available, using 'unknown'");
   }
 }
-
-
 
 
     let visitCount = parseInt(localStorage.getItem("visitCount") || "0") + 1;
