@@ -152,6 +152,11 @@ window.addEventListener("message", function (event) {
     console.error("❌ Error parsing pageUrl:", e);
   }
 });
+if (store === "unknown") {
+  store = localStorage.getItem("storeName") || "fallback-default";
+  console.log("⛑️ Fallback store from localStorage:", store);
+}
+
 
 
     let visitCount = parseInt(localStorage.getItem("visitCount") || "0") + 1;
