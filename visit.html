@@ -137,18 +137,22 @@
 let store = "unknown";
 
 window.addEventListener("message", function (event) {
+  console.log("📩 Received postMessage", event.data, "from", event.origin);
 
-  if (event.data && event.data.pageUrl) {
-    try {
-      const urlParts = new URL(event.data.pageUrl);
-      store = urlParts;
-      localStorage.setItem("storeName", store);
-      console.log("✅ Received store from parent:", store);
-    } catch (e) {
-      console.error("URL parsing error:", e);
-    }
+  // OPTIONAL: if you want strict origin check
+  if (!event.data || !event.data.pageUrl) return;
+
+  try {
+    const url = new URL(event.data.pageUrl);
+    const slug = url.pathname.split("/").pop(); // last part of URL path
+    store = slug;
+    localStorage.setItem("storeName", slug);
+    console.log("✅ Store slug set to:", store);
+  } catch (e) {
+    console.error("❌ Error parsing pageUrl:", e);
   }
 });
+
 
     let visitCount = parseInt(localStorage.getItem("visitCount") || "0") + 1;
     localStorage.setItem("visitCount", visitCount);
