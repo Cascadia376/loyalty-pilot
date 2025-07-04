@@ -250,6 +250,9 @@ window.addEventListener("message", function (event) {
       const payload = {
         uuid,
         store,
+        slug,
+        url,
+        console,
         timestamp: new Date().toISOString(),
         visitCount,
         firstName: profile.firstName || "",
