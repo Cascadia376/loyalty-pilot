@@ -128,46 +128,42 @@
 <script>
   (async function () {
     const webhook = "https://hooks.zapier.com/hooks/catch/6984728/u2cffqu/";
+    const ipinfoToken = "3728e29363dc0b";
+    
     const uuid = localStorage.getItem("visitUUID") || (() => {
       const id = crypto.randomUUID();
       localStorage.setItem("visitUUID", id);
       return id;
     })();
 
-  // 🧠 Get source from URL param (?source=...)
-let store = "unknown";
-const params = new URLSearchParams(window.location.search);
-const sourceUrl = params.get("source");
+    let store = "unknown";
+    const params = new URLSearchParams(window.location.search);
+    const sourceUrl = params.get("source");
 
-if (sourceUrl) {
-  try {
-    const parsed = new URL(sourceUrl);
-    const urlPath = parsed.pathname.toLowerCase(); // Make it case-insensitive
-
-    if (urlPath.includes("general-in-store-giveaway-kamloops-getaway")) {
-      store = "General - Kamloops";
-    } else if (urlPath.includes("general-in-store-giveaway-sauna")) {
-      store = "General - Sauna";
-    } else if (urlPath.includes("courtenay-in-store-giveaway-kamloops-getaway")) {
-      store = "Courtenay - Kamloops";
-    } else if (urlPath.includes("courtenay-in-store-giveaway-sauna")) {
-      store = "Courtenay - Sauna";
+    if (sourceUrl) {
+      try {
+        const parsed = new URL(sourceUrl);
+        const urlPath = parsed.pathname.toLowerCase();
+        if (urlPath.includes("general-in-store-giveaway-kamloops-getaway")) {
+          store = "General - Kamloops";
+        } else if (urlPath.includes("general-in-store-giveaway-sauna")) {
+          store = "General - Sauna";
+        } else if (urlPath.includes("courtenay-in-store-giveaway-kamloops-getaway")) {
+          store = "Courtenay - Kamloops";
+        } else if (urlPath.includes("courtenay-in-store-giveaway-sauna")) {
+          store = "Courtenay - Sauna";
+        } else {
+          store = "Port Alberni";
+        }
+        localStorage.setItem("storeName", store);
+        console.log("🎯 Got store from ?source param:", store);
+      } catch (e) {
+        console.error("❌ Error parsing ?source:", e);
+      }
     } else {
-      store = "Port Alberni";
+      store = localStorage.getItem("storeName") || "Port Alberni";
+      console.log("🧩 Using fallback from localStorage:", store);
     }
-
-    localStorage.setItem("storeName", store);
-    console.log("🎯 Got store from ?source param:", store);
-  } catch (e) {
-    console.error("❌ Error parsing ?source:", e);
-  }
-} else {
-  store = localStorage.getItem("storeName") || "Port Alberni";
-  console.log("🧩 Using fallback from localStorage:", store);
-}
-
-
-
 
     let visitCount = parseInt(localStorage.getItem("visitCount") || "0") + 1;
     localStorage.setItem("visitCount", visitCount);
@@ -204,7 +200,7 @@ if (sourceUrl) {
 
     if (profileCache.email) {
       greeting.innerText = "Welcome back, " + profileCache.firstName + "!";
-      logVisit(profileCache);
+      await logVisit(profileCache);
       showQuestion();
     } else {
       profileForm.classList.remove("hidden");
@@ -221,7 +217,7 @@ if (sourceUrl) {
       localStorage.setItem("profileData", JSON.stringify(data));
       greeting.innerText = "Thanks, " + data.firstName + "!";
       profileForm.classList.add("hidden");
-      logVisit(data);
+      await logVisit(data);
       showQuestion();
     });
 
@@ -261,7 +257,31 @@ if (sourceUrl) {
       });
     }
 
-    function logVisit(profile) {
+    async function logVisit(profile) {
+      let location = JSON.parse(localStorage.getItem("geoData") || "null");
+
+      if (!location) {
+        try {
+          const geoRes = await fetch(`https://ipinfo.io/json?token=${ipinfoToken}`);
+          const geoJson = await geoRes.json();
+          location = {
+            ip: geoJson.ip || "Unknown",
+            city: geoJson.city || "Unknown",
+            region: geoJson.region || "Unknown",
+            country: geoJson.country || "Unknown"
+          };
+          localStorage.setItem("geoData", JSON.stringify(location));
+        } catch (e) {
+          console.error("🌐 Geolocation fetch failed:", e);
+          location = {
+            ip: "Unknown",
+            city: "Unknown",
+            region: "Unknown",
+            country: "Unknown"
+          };
+        }
+      }
+
       const payload = {
         uuid,
         store,
@@ -270,8 +290,10 @@ if (sourceUrl) {
         firstName: profile.firstName || "",
         lastName: profile.lastName || "",
         email: profile.email || "",
-        optIn: profile.optIn || false
+        optIn: profile.optIn || false,
+        location
       };
+
       fetch(webhook, {
         method: "POST",
         mode: "no-cors",
