@@ -255,50 +255,60 @@
       });
     }
 
-    async function logVisit(profile) {
-      let location = JSON.parse(localStorage.getItem("geoData") || "null");
+   async function logVisit(profile) {
+  let location = JSON.parse(localStorage.getItem("geoData") || "null");
 
-      if (!location) {
-        try {
-          const geoRes = await fetch(`https://ipinfo.io/json?token=${ipinfoToken}`);
-          const geoJson = await geoRes.json();
-          location = {
-            ip: geoJson.ip || "Unknown",
-            city: geoJson.city || "Unknown",
-            region: geoJson.region || "Unknown",
-            country: geoJson.country || "Unknown"
-          };
-          localStorage.setItem("geoData", JSON.stringify(location));
-        } catch (e) {
-          console.error("🌐 Geolocation fetch failed:", e);
-          location = {
-            ip: "Unknown",
-            city: "Unknown",
-            region: "Unknown",
-            country: "Unknown"
-          };
-        }
-      }
-
-      const payload = {
-        uuid,
-        store,
-        timestamp: new Date().toISOString(),
-        visitCount,
-        firstName: profile.firstName || "",
-        lastName: profile.lastName || "",
-        email: profile.email || "",
-        optIn: profile.optIn || false,
-        location
+  if (!location) {
+    try {
+      const geoRes = await fetch("https://ipinfo.io/json?token=3728e29363dc0b");
+      const geoJson = await geoRes.json();
+      location = {
+        ip: geoJson.ip || "Unknown",
+        city: geoJson.city || "Unknown",
+        region: geoJson.region || "Unknown",
+        country: geoJson.country || "Unknown"
       };
-
-      fetch(webhook, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
+      localStorage.setItem("geoData", JSON.stringify(location));
+    } catch (e) {
+      console.error("🌐 Geolocation fetch failed:", e);
+      location = {
+        ip: "Unknown",
+        city: "Unknown",
+        region: "Unknown",
+        country: "Unknown"
+      };
     }
+  }
+
+  const answers = JSON.parse(localStorage.getItem("answers") || "{}");
+
+  const payload = {
+    UUID: uuid,
+    EMAIL: profile.email || "",
+    "FIRST NAME": profile.firstName || "",
+    "LAST NAME": profile.lastName || "",
+    "OPT-IN": profile.optIn || false,
+    GIVEAWAY: store,
+    TIMESTAMP: new Date().toISOString(),
+    "TOTAL VISITS": visitCount,
+    IP: location.ip,
+    CITY: location.city,
+    REGION: location.region,
+    COUNTRY: location.country,
+    visitFrequency: answers.visitFrequency || "",
+    otherStores: answers.otherStores || "",
+    purchaseType: answers.purchaseType || "",
+    avgSpend: answers.avgSpend || ""
+  };
+
+  fetch(webhook, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+}
+
   })();
 </script>
 </body>
