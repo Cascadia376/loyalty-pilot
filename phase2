@@ -1,1 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Enter Below</title>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root { --accent: #339999; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Source Sans 3', sans-serif;
+      background-color: #fff;
+      color: #111;
+      padding: 2rem 1.5rem;
+      max-width: 500px;
+      margin: auto;
+    }
+    h1 {
+      font-size: 1.75rem;
+      margin-bottom: 2rem;
+      color: var(--accent);
+      text-align: center;
+      font-weight: 600;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    label { font-weight: 600; font-size: 1rem; }
+    input[type="text"], input[type="email"] {
+      width: 100%;
+      border: none;
+      border-bottom: 2px solid #ccc;
+      font-size: 1rem;
+      padding: 0.4rem 0;
+      background: transparent;
+      color: #111;
+      transition: border-color 0.2s ease;
+    }
+    input[type="text"]:focus, input[type="email"]:focus {
+      border-color: var(--accent);
+      outline: none;
+    }
+    .checkbox-wrapper {
+      display: flex;
+      align-items: center;
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+    input[type="checkbox"] {
+      accent-color: var(--accent);
+      width: 1.1rem;
+      height: 1.1rem;
+      margin-right: 0.5rem;
+    }
+    button {
+      background-color: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 0.85rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .hidden { display: none; }
+    #questionContainer {
+      margin-top: 2rem;
+    }
+    #questionContainer form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    #questionContainer form > label:first-of-type {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+    #questionContainer label {
+      display: flex;
+      align-items: center;
+      font-size: 0.95rem;
+      font-weight: 400;
+    }
+    #questionContainer input[type="radio"] {
+      margin-right: 0.5rem;
+      accent-color: var(--accent);
+    }
+    #questionContainer p {
+      font-size: 1rem;
+      color: var(--accent);
+      font-weight: 600;
+      text-align: center;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
 
+  <h1 id="greeting">Enter Below!</h1>
+
+  <form id="profileForm" class="hidden">
+    <div>
+      <label for="firstName">First Name</label>
+      <input id="firstName" name="firstName" type="text" required />
+    </div>
+    <div>
+      <label for="lastName">Last Name</label>
+      <input id="lastName" name="lastName" type="text" required />
+    </div>
+    <div>
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" required />
+    </div>
+    <div class="checkbox-wrapper">
+      <input id="optIn" name="optIn" type="checkbox" checked />
+      <label for="optIn">Yes, I want to receive emails</label>
+    </div>
+    <button type="submit">Submit</button>
+  </form>
+
+  <div id="questionContainer" class="hidden"></div>
+
+<script>
+  (async function () {
+    const webhook = "https://hooks.zapier.com/hooks/catch/6984728/u2cffqu/";
+    const uuid = localStorage.getItem("visitUUID") || (() => {
+      const id = crypto.randomUUID();
+      localStorage.setItem("visitUUID", id);
+      return id;
+    })();
+
+  // 🧠 Get source from URL param (?source=...)
+let store = "unknown";
+const params = new URLSearchParams(window.location.search);
+const sourceUrl = params.get("source");
+
+if (sourceUrl) {
+  try {
+    const parsed = new URL(sourceUrl);
+    const urlPath = parsed.pathname.toLowerCase(); // Make it case-insensitive
+
+    if (urlPath.includes("general-in-store-giveaway-kamloops-getaway")) {
+      store = "General - Kamloops";
+    } else if (urlPath.includes("general-in-store-giveaway-sauna")) {
+      store = "General - Sauna";
+    } else if (urlPath.includes("courtenay-in-store-giveaway-kamloops-getaway")) {
+      store = "Courtenay - Kamloops";
+    } else if (urlPath.includes("courtenay-in-store-giveaway-sauna")) {
+      store = "Courtenay - Sauna";
+    } else {
+      store = "Port Alberni";
+    }
+
+    localStorage.setItem("storeName", store);
+    console.log("🎯 Got store from ?source param:", store);
+  } catch (e) {
+    console.error("❌ Error parsing ?source:", e);
+  }
+} else {
+  store = localStorage.getItem("storeName") || "Port Alberni";
+  console.log("🧩 Using fallback from localStorage:", store);
+}
+
+
+
+
+    let visitCount = parseInt(localStorage.getItem("visitCount") || "0") + 1;
+    localStorage.setItem("visitCount", visitCount);
+
+    const questionIndex = parseInt(localStorage.getItem("questionIndex") || "0");
+
+    const questions = [
+      {
+        key: "visitFrequency",
+        text: "How often do you visit our stores?",
+        options: ["First time", "Once a month", "A few times a month", "Weekly", "More than once a week"]
+      },
+      {
+        key: "otherStores",
+        text: "Do you shop at our other locations?",
+        options: ["Yes", "No", "Sometimes"]
+      },
+      {
+        key: "purchaseType",
+        text: "What do you usually buy here?",
+        options: ["Beer", "Wine", "Spirits", "Cider/Coolers", "Other"]
+      },
+      {
+        key: "avgSpend",
+        text: "About how much do you usually spend per visit?",
+        options: ["Under $20", "$20-$50", "$50-$100", "Over $100"]
+      }
+    ];
+
+    const profileCache = JSON.parse(localStorage.getItem("profileData") || "{}");
+    const profileForm = document.getElementById("profileForm");
+    const greeting = document.getElementById("greeting");
+    const questionContainer = document.getElementById("questionContainer");
+
+    if (profileCache.email) {
+      greeting.innerText = "Welcome back, " + profileCache.firstName + "!";
+      logVisit(profileCache);
+      showQuestion();
+    } else {
+      profileForm.classList.remove("hidden");
+    }
+
+    profileForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const data = {
+        firstName: profileForm.firstName.value.trim(),
+        lastName: profileForm.lastName.value.trim(),
+        email: profileForm.email.value.trim(),
+        optIn: profileForm.optIn.checked
+      };
+      localStorage.setItem("profileData", JSON.stringify(data));
+      greeting.innerText = "Thanks, " + data.firstName + "!";
+      profileForm.classList.add("hidden");
+      logVisit(data);
+      showQuestion();
+    });
+
+    function showQuestion() {
+      const q = questions[questionIndex % questions.length];
+      const formHtml = `<form id="progressForm">
+        <label>${q.text}</label>
+        ${q.options.map(o => `<label><input type="radio" name="answer" value="${o}" required> ${o}</label>`).join("")}
+        <button type="submit">Submit</button>
+      </form>`;
+      questionContainer.innerHTML = formHtml;
+      questionContainer.classList.remove("hidden");
+
+      document.getElementById("progressForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const answer = document.querySelector('input[name="answer"]:checked').value;
+        const answers = JSON.parse(localStorage.getItem("answers") || "{}");
+        answers[q.key] = answer;
+        localStorage.setItem("answers", JSON.stringify(answers));
+
+        const payload = {
+          uuid,
+          question: q.key,
+          answer,
+          timestamp: new Date().toISOString(),
+          store
+        };
+        fetch(webhook, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        localStorage.setItem("questionIndex", questionIndex + 1);
+        questionContainer.innerHTML = "<p>Thank you for your answer!</p>";
+      });
+    }
+
+    function logVisit(profile) {
+      const payload = {
+        uuid,
+        store,
+        timestamp: new Date().toISOString(),
+        visitCount,
+        firstName: profile.firstName || "",
+        lastName: profile.lastName || "",
+        email: profile.email || "",
+        optIn: profile.optIn || false
+      };
+      fetch(webhook, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+    }
+  })();
+</script>
+</body>
+</html>
