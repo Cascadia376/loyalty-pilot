@@ -6,103 +6,32 @@
   <title>Enter Below</title>
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet" />
   <style>
-    :root { --accent: #339999; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Source Sans 3', sans-serif;
-      background-color: #fff;
-      color: #111;
-      padding: 2rem 1.5rem;
-      max-width: 500px;
-      margin: auto;
+    :root { --accent:#339999; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Source Sans 3',sans-serif; background:#fff; color:#111; padding:2rem 1.5rem; max-width:500px; margin:auto; }
+    h1 { font-size:1.75rem; margin-bottom:2rem; color:var(--accent); text-align:center; font-weight:600; }
+    form { display:flex; flex-direction:column; gap:1.5rem; }
+    label { font-weight:600; font-size:1rem; }
+    input[type="text"], input[type="email"], select {
+      width:100%; border:none; border-bottom:2px solid #ccc; padding:.5rem; font-size:1rem; color:#111; background:transparent; transition:border-color .2s ease;
     }
-    h1 {
-      font-size: 1.75rem;
-      margin-bottom: 2rem;
-      color: var(--accent);
-      text-align: center;
-      font-weight: 600;
-    }
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-    label { font-weight: 600; font-size: 1rem; }
-    input[type="text"], input[type="email"] {
-      width: 100%;
-      border: none;
-      border-bottom: 2px solid #ccc;
-      font-size: 1rem;
-      padding: 0.4rem 0;
-      background: transparent;
-      color: #111;
-      transition: border-color 0.2s ease;
-    }
-    input[type="text"]:focus, input[type="email"]:focus {
-      border-color: var(--accent);
-      outline: none;
-    }
-    .checkbox-wrapper {
-      display: flex;
-      align-items: center;
-      font-size: 0.95rem;
-      font-weight: 500;
-    }
-    input[type="checkbox"] {
-      accent-color: var(--accent);
-      width: 1.1rem;
-      height: 1.1rem;
-      margin-right: 0.5rem;
-    }
-    button {
-      background-color: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      padding: 0.85rem;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .hidden { display: none; }
-    #questionContainer {
-      margin-top: 2rem;
-    }
-    #questionContainer form {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-    #questionContainer form > label:first-of-type {
-      font-size: 1.2rem;
-      font-weight: 600;
-      color: var(--accent);
-      margin-bottom: 0.5rem;
-    }
-    #questionContainer label {
-      display: flex;
-      align-items: center;
-      font-size: 0.95rem;
-      font-weight: 400;
-    }
-    #questionContainer input[type="radio"] {
-      margin-right: 0.5rem;
-      accent-color: var(--accent);
-    }
-    #questionContainer p {
-      font-size: 1rem;
-      color: var(--accent);
-      font-weight: 600;
-      text-align: center;
-      margin-top: 2rem;
-    }
+    input:focus, select:focus { border-color:var(--accent); outline:none; }
+    .checkbox-wrapper { display:flex; align-items:center; gap:.5rem; }
+    input[type="checkbox"] { accent-color:var(--accent); width:1.1rem; height:1.1rem; }
+    button { background:var(--accent); color:#fff; padding:.75rem; border:none; cursor:pointer; font-weight:600; }
+    .hidden { display:none; }
+    #questionContainer { margin-top:2rem; }
+    #questionContainer form { display:flex; flex-direction:column; gap:1rem; }
+    #questionContainer form > label:first-of-type { font-size:1.2rem; font-weight:600; color:var(--accent); margin-bottom:.5rem; }
+    #questionContainer label { display:flex; align-items:center; font-size:.95rem; font-weight:400; }
+    #questionContainer input[type="radio"] { margin-right:.5rem; accent-color:var(--accent); }
+    #questionContainer p { font-size:1rem; color:var(--accent); font-weight:600; text-align:center; margin-top:2rem; }
   </style>
 </head>
 <body>
-
   <h1 id="greeting">Enter Below!</h1>
 
+  <!-- Keep profile form minimal; we'll also ask store in the rotating questions -->
   <form id="profileForm" class="hidden">
     <div>
       <label for="firstName">First Name</label>
@@ -126,75 +55,81 @@
   <div id="questionContainer" class="hidden"></div>
 
 <script>
+  // -------- Giveaway handoff (URL -> postMessage -> localStorage) ----------
+  let giveaway = new URLSearchParams(window.location.search).get("giveaway"); // expects 'giveaway-mtbgetaway' or 'giveaway-glamping'
+
+  window.addEventListener("message", (event) => {
+    if (event?.data && typeof event.data === "object" && event.data.giveaway) {
+      giveaway = String(event.data.giveaway);
+      localStorage.setItem("giveaway", giveaway);
+      console.log("🎁 Received giveaway via postMessage:", giveaway);
+    }
+  }, false);
+
+  if (!giveaway || !String(giveaway).trim()) {
+    giveaway = localStorage.getItem("giveaway") || "Giveaway-Unknown";
+  }
+  localStorage.setItem("giveaway", giveaway);
+  console.log("🎁 Final Giveaway set to:", giveaway);
+
   (async function () {
-    const webhook = "https://hooks.zapier.com/hooks/catch/6984728/uo78v01/";
+    const webhook = "https://hooks.zapier.com/hooks/catch/6984728/uo78v01/"; // keep your current Zap unless you want me to switch it
     const uuid = localStorage.getItem("visitUUID") || (() => {
-      const id = crypto.randomUUID();
-      localStorage.setItem("visitUUID", id);
-      return id;
+      const id = crypto.randomUUID(); localStorage.setItem("visitUUID", id); return id;
     })();
 
-  // 🧠 Get source from URL param (?source=...)
-let store = "unknown";
-const params = new URLSearchParams(window.location.search);
-const sourceUrl = params.get("source");
+    // 🏬 Same options as your profile select
+    const storeOptions = [
+      "Cascadia Courtenay (Crown Isle)",
+      "Cascadia Quadra Village",
+      "Cascadia Eagle Creek",
+      "Cascadia Uptown",
+      "Cascadia Langford",
+      "Cascadia Port Alberni",
+      "Cascadia Hatley Park",
+      "Cascadia Caddy Bay",
+      "Cascadia Nanoose Bay",
+      "Cascadia Parksville",
+      "Cascadia Royal Bay",
+      "Cascadia Allandale"
+    ];
 
-if (sourceUrl) {
-  try {
-    const parsed = new URL(sourceUrl);
-    const urlPath = parsed.pathname.toLowerCase(); // Make it case-insensitive
-
-    if (urlPath.includes("general-in-store-giveaway-kamloops-getaway")) {
-      store = "General - Kamloops";
-    } else if (urlPath.includes("general-in-store-giveaway-sauna")) {
-      store = "General - Sauna";
-    } else if (urlPath.includes("courtenay-in-store-giveaway-kamloops-getaway")) {
-      store = "Courtenay - Kamloops";
-    } else if (urlPath.includes("courtenay-in-store-giveaway-sauna")) {
-      store = "Courtenay - Sauna";
+    // Existing auto-detected store from ?source (kept as-is)
+    let store = "unknown";
+    const params = new URLSearchParams(window.location.search);
+    const sourceUrl = params.get("source");
+    if (sourceUrl) {
+      try {
+        const parsed = new URL(sourceUrl);
+        const urlPath = parsed.pathname.toLowerCase();
+        if (urlPath.includes("general-in-store-giveaway-kamloops-getaway")) store = "General - Kamloops";
+        else if (urlPath.includes("general-in-store-giveaway-sauna"))       store = "General - Sauna";
+        else if (urlPath.includes("courtenay-in-store-giveaway-kamloops-getaway")) store = "Courtenay - Kamloops";
+        else if (urlPath.includes("courtenay-in-store-giveaway-sauna"))     store = "Courtenay - Sauna";
+        else store = "Port Alberni";
+        localStorage.setItem("storeName", store);
+        console.log("🎯 Got store from ?source param:", store);
+      } catch (e) {
+        console.error("❌ Error parsing ?source:", e);
+      }
     } else {
-      store = "Port Alberni";
+      store = localStorage.getItem("storeName") || "Port Alberni";
+      console.log("🧩 Using fallback from localStorage:", store);
     }
-
-    localStorage.setItem("storeName", store);
-    console.log("🎯 Got store from ?source param:", store);
-  } catch (e) {
-    console.error("❌ Error parsing ?source:", e);
-  }
-} else {
-  store = localStorage.getItem("storeName") || "Port Alberni";
-  console.log("🧩 Using fallback from localStorage:", store);
-}
-
-
-
 
     let visitCount = parseInt(localStorage.getItem("visitCount") || "0") + 1;
     localStorage.setItem("visitCount", visitCount);
 
-    const questionIndex = parseInt(localStorage.getItem("questionIndex") || "0");
+    let questionIndex = parseInt(localStorage.getItem("questionIndex") || "0");
 
+    // ✅ Added the store question to the rotation
     const questions = [
-      {
-        key: "visitFrequency",
-        text: "How often do you visit our stores?",
-        options: ["First time", "Once a month", "A few times a month", "Weekly", "More than once a week"]
-      },
-      {
-        key: "otherStores",
-        text: "Do you shop at our other locations?",
-        options: ["Yes", "No", "Sometimes"]
-      },
-      {
-        key: "purchaseType",
-        text: "What do you usually buy here?",
-        options: ["Beer", "Wine", "Spirits", "Cider/Coolers", "Other"]
-      },
-      {
-        key: "avgSpend",
-        text: "About how much do you usually spend per visit?",
-        options: ["Under $20", "$20-$50", "$50-$100", "Over $100"]
-      }
+      { key: "visitFrequency", text: "How often do you visit our stores?", options: ["First time","Once a month","A few times a month","Weekly","More than once a week"] },
+      { key: "otherStores",    text: "Do you shop at our other locations?", options: ["Yes","No","Sometimes"] },
+      { key: "purchaseType",   text: "What do you usually buy here?", options: ["Beer","Wine","Spirits","Cider/Coolers","Other"] },
+      { key: "avgSpend",       text: "About how much do you usually spend per visit?", options: ["Under $20","$20-$50","$50-$100","Over $100"] },
+      // New question (same options as above list)
+      { key: "favoriteStore",  text: "Which store do you visit most often?", options: storeOptions }
     ];
 
     const profileCache = JSON.parse(localStorage.getItem("profileData") || "{}");
@@ -203,20 +138,20 @@ if (sourceUrl) {
     const questionContainer = document.getElementById("questionContainer");
 
     if (profileCache.email) {
-      greeting.innerText = "Welcome back, " + profileCache.firstName + "!";
+      greeting.innerText = "Welcome back, " + (profileCache.firstName || "there") + "!";
       logVisit(profileCache);
       showQuestion();
     } else {
       profileForm.classList.remove("hidden");
     }
 
-    profileForm.addEventListener("submit", async (e) => {
+    profileForm.addEventListener("submit", (e) => {
       e.preventDefault();
       const data = {
         firstName: profileForm.firstName.value.trim(),
-        lastName: profileForm.lastName.value.trim(),
-        email: profileForm.email.value.trim(),
-        optIn: profileForm.optIn.checked
+        lastName:  profileForm.lastName.value.trim(),
+        email:     profileForm.email.value.trim(),
+        optIn:     profileForm.optIn.checked
       };
       localStorage.setItem("profileData", JSON.stringify(data));
       greeting.innerText = "Thanks, " + data.firstName + "!";
@@ -227,55 +162,61 @@ if (sourceUrl) {
 
     function showQuestion() {
       const q = questions[questionIndex % questions.length];
+
+      // Render all questions as radio groups (including the long store list)
       const formHtml = `<form id="progressForm">
-        <label>${q.text}</label>
-        ${q.options.map(o => `<label><input type="radio" name="answer" value="${o}" required> ${o}</label>`).join("")}
-        <button type="submit">Submit</button>
-      </form>`;
+          <label>${q.text}</label>
+          ${q.options.map(o => `<label><input type="radio" name="answer" value="${o}" required> ${o}</label>`).join("")}
+          <button type="submit">Submit</button>
+        </form>`;
       questionContainer.innerHTML = formHtml;
       questionContainer.classList.remove("hidden");
 
       document.getElementById("progressForm").addEventListener("submit", (e) => {
         e.preventDefault();
-        const answer = document.querySelector('input[name="answer"]:checked').value;
+        const selected = document.querySelector('input[name="answer"]:checked');
+        if (!selected) return;
+        const answer = selected.value;
+
         const answers = JSON.parse(localStorage.getItem("answers") || "{}");
         answers[q.key] = answer;
         localStorage.setItem("answers", JSON.stringify(answers));
 
-        const payload = {
-          uuid,
-          question: q.key,
-          answer,
-          timestamp: new Date().toISOString(),
-          store
-        };
+        const payload = { uuid, question: q.key, answer, timestamp: new Date().toISOString(), store };
         fetch(webhook, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "application/json" },
+          method:"POST", mode:"no-cors",
+          headers:{ "Content-Type":"application/json" },
           body: JSON.stringify(payload)
         });
 
-        localStorage.setItem("questionIndex", questionIndex + 1);
+        questionIndex += 1;
+        localStorage.setItem("questionIndex", String(questionIndex));
         questionContainer.innerHTML = "<p>Thank you for your answer!</p>";
       });
     }
 
     function logVisit(profile) {
+      const answers = JSON.parse(localStorage.getItem("answers") || "{}");
       const payload = {
         uuid,
         store,
         timestamp: new Date().toISOString(),
         visitCount,
         firstName: profile.firstName || "",
-        lastName: profile.lastName || "",
-        email: profile.email || "",
-        optIn: profile.optIn || false
+        lastName:  profile.lastName  || "",
+        email:     profile.email     || "",
+        optIn:     !!profile.optIn,
+
+        // Always include the current giveaway
+        giveaway,
+
+        // Prefer the answer from the new question, fall back to any stored profile field
+        currentStore: answers.favoriteStore || profile.favoriteStore || ""
       };
+
       fetch(webhook, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
+        method:"POST", mode:"no-cors",
+        headers:{ "Content-Type":"application/json" },
         body: JSON.stringify(payload)
       });
     }
