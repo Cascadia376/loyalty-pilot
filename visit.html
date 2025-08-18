@@ -31,7 +31,7 @@
 <body>
   <h1 id="greeting">Enter Below!</h1>
 
-  <!-- Keep profile form minimal; we'll also ask store in the rotating questions -->
+  <!-- Profile form (now includes store select) -->
   <form id="profileForm" class="hidden">
     <div>
       <label for="firstName">First Name</label>
@@ -45,6 +45,26 @@
       <label for="email">Email</label>
       <input id="email" name="email" type="email" required />
     </div>
+
+    <div>
+      <label for="favoriteStore">Which store do you visit most often?</label>
+      <select id="favoriteStore" name="favoriteStore" required>
+        <option value="" disabled selected>Select a store</option>
+        <option value="Cascadia Courtenay (Crown Isle)">Cascadia Courtenay (Crown Isle)</option>
+        <option value="Cascadia Quadra Village">Cascadia Quadra Village</option>
+        <option value="Cascadia Eagle Creek">Cascadia Eagle Creek</option>
+        <option value="Cascadia Uptown">Cascadia Uptown</option>
+        <option value="Cascadia Langford">Cascadia Langford</option>
+        <option value="Cascadia Port Alberni">Cascadia Port Alberni</option>
+        <option value="Cascadia Hatley Park">Cascadia Hatley Park</option>
+        <option value="Cascadia Caddy Bay">Cascadia Caddy Bay</option>
+        <option value="Cascadia Nanoose Bay">Cascadia Nanoose Bay</option>
+        <option value="Cascadia Parksville">Cascadia Parksville</option>
+        <option value="Cascadia Royal Bay">Cascadia Royal Bay</option>
+        <option value="Cascadia Allandale">Cascadia Allandale</option>
+      </select>
+    </div>
+
     <div class="checkbox-wrapper">
       <input id="optIn" name="optIn" type="checkbox" checked />
       <label for="optIn">Yes, I want to receive emails</label>
@@ -56,8 +76,7 @@
 
 <script>
   // -------- Giveaway handoff (URL -> postMessage -> localStorage) ----------
-  let giveaway = new URLSearchParams(window.location.search).get("giveaway"); // expects 'giveaway-mtbgetaway' or 'giveaway-glamping'
-
+  let giveaway = new URLSearchParams(window.location.search).get("giveaway"); // e.g., 'giveaway-mtbgetaway' or 'giveaway-glamping'
   window.addEventListener("message", (event) => {
     if (event?.data && typeof event.data === "object" && event.data.giveaway) {
       giveaway = String(event.data.giveaway);
@@ -65,7 +84,6 @@
       console.log("🎁 Received giveaway via postMessage:", giveaway);
     }
   }, false);
-
   if (!giveaway || !String(giveaway).trim()) {
     giveaway = localStorage.getItem("giveaway") || "Giveaway-Unknown";
   }
@@ -73,12 +91,16 @@
   console.log("🎁 Final Giveaway set to:", giveaway);
 
   (async function () {
-    const webhook = "https://hooks.zapier.com/hooks/catch/6984728/uo78v01/"; // keep your current Zap unless you want me to switch it
+    // Phase-2 Zap (per documentation)
+    const webhook = "https://hooks.zapier.com/hooks/catch/6984728/u2cffqu/";
+    const ipinfoToken = "3728e29363dc0b";
+
+    // Stable per-device visit UUID
     const uuid = localStorage.getItem("visitUUID") || (() => {
       const id = crypto.randomUUID(); localStorage.setItem("visitUUID", id); return id;
     })();
 
-    // 🏬 Same options as your profile select
+    // Store options (reused in the rotating question)
     const storeOptions = [
       "Cascadia Courtenay (Crown Isle)",
       "Cascadia Quadra Village",
@@ -94,7 +116,7 @@
       "Cascadia Allandale"
     ];
 
-    // Existing auto-detected store from ?source (kept as-is)
+    // Optional: auto-detect store from ?source (kept from your previous flow)
     let store = "unknown";
     const params = new URLSearchParams(window.location.search);
     const sourceUrl = params.get("source");
@@ -117,53 +139,57 @@
       console.log("🧩 Using fallback from localStorage:", store);
     }
 
-    let visitCount = parseInt(localStorage.getItem("visitCount") || "0") + 1;
-    localStorage.setItem("visitCount", visitCount);
+    function getVancouverTimestamp() {
+      const date = new Date();
+      const options = { timeZone: "America/Vancouver", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false };
+      const parts = new Intl.DateTimeFormat("en-CA", options).formatToParts(date);
+      const get = (t) => (parts.find(p => p.type === t)?.value || "").toString().padStart(2, "0");
+      return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}`;
+    }
 
+    let visitCount = parseInt(localStorage.getItem("visitCount") || "0");
     let questionIndex = parseInt(localStorage.getItem("questionIndex") || "0");
 
-    // ✅ Added the store question to the rotation
+    const profileForm = document.getElementById("profileForm");
+    const greeting = document.getElementById("greeting");
+    const questionContainer = document.getElementById("questionContainer");
+    const profileCache = JSON.parse(localStorage.getItem("profileData") || "{}");
+
+    // Rotating survey (includes store question too)
     const questions = [
       { key: "visitFrequency", text: "How often do you visit our stores?", options: ["First time","Once a month","A few times a month","Weekly","More than once a week"] },
       { key: "otherStores",    text: "Do you shop at our other locations?", options: ["Yes","No","Sometimes"] },
       { key: "purchaseType",   text: "What do you usually buy here?", options: ["Beer","Wine","Spirits","Cider/Coolers","Other"] },
       { key: "avgSpend",       text: "About how much do you usually spend per visit?", options: ["Under $20","$20-$50","$50-$100","Over $100"] },
-      // New question (same options as above list)
       { key: "favoriteStore",  text: "Which store do you visit most often?", options: storeOptions }
     ];
 
-    const profileCache = JSON.parse(localStorage.getItem("profileData") || "{}");
-    const profileForm = document.getElementById("profileForm");
-    const greeting = document.getElementById("greeting");
-    const questionContainer = document.getElementById("questionContainer");
-
     if (profileCache.email) {
       greeting.innerText = "Welcome back, " + (profileCache.firstName || "there") + "!";
-      logVisit(profileCache);
+      await logVisit(profileCache);  // log a “visit” immediately on return
       showQuestion();
     } else {
       profileForm.classList.remove("hidden");
     }
 
-    profileForm.addEventListener("submit", (e) => {
+    profileForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const data = {
-        firstName: profileForm.firstName.value.trim(),
-        lastName:  profileForm.lastName.value.trim(),
-        email:     profileForm.email.value.trim(),
-        optIn:     profileForm.optIn.checked
+        firstName: document.getElementById("firstName").value.trim(),
+        lastName:  document.getElementById("lastName").value.trim(),
+        email:     document.getElementById("email").value.trim(),
+        favoriteStore: document.getElementById("favoriteStore").value,
+        optIn:     document.getElementById("optIn").checked
       };
       localStorage.setItem("profileData", JSON.stringify(data));
       greeting.innerText = "Thanks, " + data.firstName + "!";
       profileForm.classList.add("hidden");
-      logVisit(data);
+      await logVisit(data);           // first profile submit = first logged visit
       showQuestion();
     });
 
     function showQuestion() {
       const q = questions[questionIndex % questions.length];
-
-      // Render all questions as radio groups (including the long store list)
       const formHtml = `<form id="progressForm">
           <label>${q.text}</label>
           ${q.options.map(o => `<label><input type="radio" name="answer" value="${o}" required> ${o}</label>`).join("")}
@@ -172,53 +198,88 @@
       questionContainer.innerHTML = formHtml;
       questionContainer.classList.remove("hidden");
 
-      document.getElementById("progressForm").addEventListener("submit", (e) => {
+      document.getElementById("progressForm").addEventListener("submit", async (e) => {
         e.preventDefault();
         const selected = document.querySelector('input[name="answer"]:checked');
-        if (!selected) return;
+        if (!selected) return alert("Please select an answer before continuing.");
         const answer = selected.value;
 
         const answers = JSON.parse(localStorage.getItem("answers") || "{}");
         answers[q.key] = answer;
         localStorage.setItem("answers", JSON.stringify(answers));
 
-        const payload = { uuid, question: q.key, answer, timestamp: new Date().toISOString(), store };
-        fetch(webhook, {
-          method:"POST", mode:"no-cors",
-          headers:{ "Content-Type":"application/json" },
-          body: JSON.stringify(payload)
-        });
-
         questionIndex += 1;
         localStorage.setItem("questionIndex", String(questionIndex));
+
+        await logVisit(JSON.parse(localStorage.getItem("profileData") || "{}")); // log after each answer
         questionContainer.innerHTML = "<p>Thank you for your answer!</p>";
       });
     }
 
-    function logVisit(profile) {
+    async function logVisit(profile) {
+      // Geo cache (12h)
+      const geoTimestamp = parseInt(localStorage.getItem("geoTimestamp") || "0");
+      const now = Date.now();
+      const twelveHours = 12 * 60 * 60 * 1000;
+      let location = JSON.parse(localStorage.getItem("geoData") || "null");
+
+      if (!location || (now - geoTimestamp) > twelveHours) {
+        try {
+          const geoRes = await fetch(`https://ipinfo.io/json?token=${ipinfoToken}`);
+          const geoJson = await geoRes.json();
+          location = {
+            ip:      geoJson.ip      || "Unknown",
+            city:    geoJson.city    || "Unknown",
+            region:  geoJson.region  || "Unknown",
+            country: geoJson.country || "Unknown"
+          };
+          localStorage.setItem("geoData", JSON.stringify(location));
+          localStorage.setItem("geoTimestamp", String(now));
+        } catch (e) {
+          console.error("🌐 Geolocation fetch failed:", e);
+          location = { ip: "", city: "", region: "", country: "" };
+        }
+      }
+
+      // Increment and persist visit count on every log
+      visitCount = (parseInt(localStorage.getItem("visitCount") || "0") + 1);
+      localStorage.setItem("visitCount", String(visitCount));
+
       const answers = JSON.parse(localStorage.getItem("answers") || "{}");
+
+      // Payload aligned with your sheet/Phase-2 doc
       const payload = {
-        uuid,
-        store,
-        timestamp: new Date().toISOString(),
-        visitCount,
-        firstName: profile.firstName || "",
-        lastName:  profile.lastName  || "",
-        email:     profile.email     || "",
-        optIn:     !!profile.optIn,
+        UUID: uuid,
+        EMAIL:        profile.email || "",
+        "FIRST NAME": profile.firstName || "",
+        "LAST NAME":  profile.lastName || "",
+        "OPT-IN":     !!profile.optIn,
 
-        // Always include the current giveaway
-        giveaway,
+        GIVEAWAY:     localStorage.getItem("giveaway") || "Giveaway-Unknown",
+        "CURRENT STORE": answers.favoriteStore || profile.favoriteStore || "",
 
-        // Prefer the answer from the new question, fall back to any stored profile field
-        currentStore: answers.favoriteStore || profile.favoriteStore || ""
+        TIMESTAMP:    getVancouverTimestamp(),
+        "TOTAL VISITS": visitCount,
+
+        IP:      location.ip,
+        CITY:    location.city,
+        REGION:  location.region,
+        COUNTRY: location.country,
+
+        // Survey answers snapshot
+        visitFrequency: answers.visitFrequency || "",
+        otherStores:    answers.otherStores   || "",
+        purchaseType:   answers.purchaseType  || "",
+        avgSpend:       answers.avgSpend      || ""
       };
 
       fetch(webhook, {
-        method:"POST", mode:"no-cors",
-        headers:{ "Content-Type":"application/json" },
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
+      console.log("📬 Sent to Zapier:", { giveaway: payload.GIVEAWAY, visits: payload["TOTAL VISITS"], email: payload.EMAIL, ip: payload.IP });
     }
   })();
 </script>
