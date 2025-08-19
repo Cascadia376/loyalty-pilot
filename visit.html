@@ -80,7 +80,7 @@
 
   <script>
     (async function () {
-      // ✅ Phase 1 webhook
+      // ✅ Zapier webhook (Phase 1)
       const webhook = "https://hooks.zapier.com/hooks/catch/6984728/uo78v01/";
 
       // ✅ Cache a persistent UUID
@@ -90,17 +90,33 @@
         return id;
       })();
 
-      // 🧠 Derive store/giveaway context from Shopify page URL (?source=...)
-      let store = "unknown";
+      // ---------- Giveaway + Store context ----------
       const params = new URLSearchParams(window.location.search);
-      const sourceUrl = params.get("source");
+      const sourceParam = params.get("source");
+      const giveawayParam = params.get("giveaway");
 
-      if (sourceUrl) {
+      // Giveaway: prefer direct ?giveaway= on iframe; otherwise try to read it from the parent page (?source=...)
+      let giveaway = localStorage.getItem("giveaway") || "Giveaway-Unknown";
+      if (giveawayParam) {
+        giveaway = giveawayParam;
+      } else if (sourceParam) {
         try {
-          const parsed = new URL(sourceUrl);
+          const parentUrl = new URL(sourceParam);
+          const giveawayFromParent = new URLSearchParams(parentUrl.search).get("giveaway");
+          if (giveawayFromParent) giveaway = giveawayFromParent;
+        } catch (e) {
+          console.warn("Could not parse parent source URL for giveaway:", e);
+        }
+      }
+      localStorage.setItem("giveaway", giveaway);
+
+      // Store mapping from the parent page path (if present), else persist previous
+      let store = "unknown";
+      if (sourceParam) {
+        try {
+          const parsed = new URL(sourceParam);
           const urlPath = parsed.pathname.toLowerCase();
 
-          // Map URL paths to friendly store/giveaway labels
           if (urlPath.includes("general-in-store-giveaway-kamloops-getaway")) {
             store = "General - Kamloops";
           } else if (urlPath.includes("giveaway-mtbgetaway")) {
@@ -112,15 +128,12 @@
           } else {
             store = "Port Alberni";
           }
-
           localStorage.setItem("storeName", store);
-          console.log("🎯 Got store from ?source param:", store);
         } catch (e) {
           console.error("❌ Error parsing ?source:", e);
         }
       } else {
         store = localStorage.getItem("storeName") || "Port Alberni";
-        console.log("🧩 Using fallback from localStorage:", store);
       }
 
       // 📅 Local (America/Vancouver) timestamp helper
@@ -139,9 +152,7 @@
         const cachedAt = parseInt(localStorage.getItem("geoTimestamp") || "0");
         const twelveHours = 12 * 60 * 60 * 1000;
         if (now - cachedAt < twelveHours) {
-          try {
-            return JSON.parse(localStorage.getItem("geoData") || "null");
-          } catch (_) {}
+          try { return JSON.parse(localStorage.getItem("geoData") || "null"); } catch (_) {}
         }
         try {
           const res = await fetch(`https://ipinfo.io/json?token=${ipinfoToken}`);
@@ -178,10 +189,9 @@
       const questionContainer = document.getElementById("questionContainer");
       const profileCache = JSON.parse(localStorage.getItem("profileData") || "{}");
 
-      // First-time vs returning
+      // First-time vs returning (do NOT log or increment on load)
       if (profileCache.email) {
         greeting.innerText = "Welcome back, " + (profileCache.firstName || "there") + "!";
-        // 🚫 No increment and no logging on load
         showQuestion();
       } else {
         profileForm.classList.remove("hidden");
@@ -258,6 +268,7 @@
           "OPT-IN": !!profile?.optIn,
 
           // Context
+          GIVEAWAY: localStorage.getItem("giveaway") || giveaway,
           STORE: store,
           "FAVORITE STORE": profile?.favoriteStore || "",
           TIMESTAMP: getVancouverTimestamp(),
