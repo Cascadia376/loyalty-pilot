@@ -47,7 +47,7 @@
       <input id="email" name="email" type="email" required />
     </div>
 
-    <!-- Favorite store -->
+    <!-- Favorite store (added from the other doc) -->
     <div>
       <label for="favoriteStore">Which store do you visit most often?</label>
       <select id="favoriteStore" name="favoriteStore" required>
@@ -80,9 +80,8 @@
 
   <script>
     (async function () {
-      // ✅ Zapier webhook (Phase 1)
-      const webhook = "https://hooks.zapier.com/hooks/catch/6984728/uo78v01/";
-
+      // ✅ Phase 1 webhook stays the same
+      const webhook = "https://hooks.zapier.com/hooks/catch/6984728/uo78v01/"; // Phase 1
       // ✅ Cache a persistent UUID
       const uuid = localStorage.getItem("visitUUID") || (() => {
         const id = crypto.randomUUID();
@@ -90,33 +89,17 @@
         return id;
       })();
 
-      // ---------- Giveaway + Store context ----------
-      const params = new URLSearchParams(window.location.search);
-      const sourceParam = params.get("source");
-      const giveawayParam = params.get("giveaway");
-
-      // Giveaway: prefer direct ?giveaway= on iframe; otherwise try to read it from the parent page (?source=...)
-      let giveaway = localStorage.getItem("giveaway") || "Giveaway-Unknown";
-      if (giveawayParam) {
-        giveaway = giveawayParam;
-      } else if (sourceParam) {
-        try {
-          const parentUrl = new URL(sourceParam);
-          const giveawayFromParent = new URLSearchParams(parentUrl.search).get("giveaway");
-          if (giveawayFromParent) giveaway = giveawayFromParent;
-        } catch (e) {
-          console.warn("Could not parse parent source URL for giveaway:", e);
-        }
-      }
-      localStorage.setItem("giveaway", giveaway);
-
-      // Store mapping from the parent page path (if present), else persist previous
+      // 🧠 Derive store/giveaway context from Shopify page URL (?source=...)
       let store = "unknown";
-      if (sourceParam) {
+      const params = new URLSearchParams(window.location.search);
+      const sourceUrl = params.get("source");
+
+      if (sourceUrl) {
         try {
-          const parsed = new URL(sourceParam);
+          const parsed = new URL(sourceUrl);
           const urlPath = parsed.pathname.toLowerCase();
 
+          // Map URL paths to friendly store/giveaway labels (keep your existing mapping logic)
           if (urlPath.includes("general-in-store-giveaway-kamloops-getaway")) {
             store = "General - Kamloops";
           } else if (urlPath.includes("giveaway-mtbgetaway")) {
@@ -128,12 +111,15 @@
           } else {
             store = "Port Alberni";
           }
+
           localStorage.setItem("storeName", store);
+          console.log("🎯 Got store from ?source param:", store);
         } catch (e) {
           console.error("❌ Error parsing ?source:", e);
         }
       } else {
         store = localStorage.getItem("storeName") || "Port Alberni";
+        console.log("🧩 Using fallback from localStorage:", store);
       }
 
       // 📅 Local (America/Vancouver) timestamp helper
@@ -152,7 +138,9 @@
         const cachedAt = parseInt(localStorage.getItem("geoTimestamp") || "0");
         const twelveHours = 12 * 60 * 60 * 1000;
         if (now - cachedAt < twelveHours) {
-          try { return JSON.parse(localStorage.getItem("geoData") || "null"); } catch (_) {}
+          try {
+            return JSON.parse(localStorage.getItem("geoData") || "null");
+          } catch (_) {}
         }
         try {
           const res = await fetch(`https://ipinfo.io/json?token=${ipinfoToken}`);
@@ -172,7 +160,7 @@
         }
       }
 
-      // 🧩 Question set
+      // 🧩 Question set (from your other doc)
       const questions = [
         { key: "visitFrequency", text: "How often do you visit our stores?", options: ["First time","Once a month","A few times a month","Weekly","More than once a week"] },
         { key: "otherStores",    text: "Do you shop at our other locations?", options: ["Yes","No","Sometimes"] },
@@ -180,8 +168,9 @@
         { key: "avgSpend",       text: "About how much do you usually spend per visit?", options: ["Under $20","$20-$50","$50-$100","Over $100"] }
       ];
 
-      // 🔁 Progressive state (no auto-increment on load)
-      let visitCount = parseInt(localStorage.getItem("visitCount") || "0");
+      // 🔁 Progressive state
+      let visitCount = parseInt(localStorage.getItem("visitCount") || "0") + 1;
+      localStorage.setItem("visitCount", visitCount);
       let questionIndex = parseInt(localStorage.getItem("questionIndex") || "0");
 
       const profileForm = document.getElementById("profileForm");
@@ -189,9 +178,10 @@
       const questionContainer = document.getElementById("questionContainer");
       const profileCache = JSON.parse(localStorage.getItem("profileData") || "{}");
 
-      // First-time vs returning (do NOT log or increment on load)
+      // First-time vs returning
       if (profileCache.email) {
         greeting.innerText = "Welcome back, " + (profileCache.firstName || "there") + "!";
+        await logVisit(profileCache);   // send a visit row on load for returning visitor
         showQuestion();
       } else {
         profileForm.classList.remove("hidden");
@@ -211,9 +201,9 @@
         greeting.innerText = "Thanks, " + data.firstName + "!";
         profileForm.classList.add("hidden");
 
-        // ✅ Increment and log only after submit
-        visitCount++;
-        localStorage.setItem("visitCount", String(visitCount));
+        // Increment and log visit
+        visitCount = parseInt(localStorage.getItem("visitCount") || "0") + 1;
+        localStorage.setItem("visitCount", visitCount);
         await logVisit(data);
 
         showQuestion();
@@ -243,9 +233,9 @@
           questionIndex++;
           localStorage.setItem("questionIndex", String(questionIndex));
 
-          // ✅ Increment and log each interaction as a visit/progress row
-          visitCount++;
-          localStorage.setItem("visitCount", String(visitCount));
+          // Increment and log each interaction as a visit/progress row
+          visitCount = parseInt(localStorage.getItem("visitCount") || "0") + 1;
+          localStorage.setItem("visitCount", visitCount);
 
           const profile = JSON.parse(localStorage.getItem("profileData") || "{}");
           await logVisit(profile, { lastQuestion: q.key, lastAnswer: answer });
@@ -268,10 +258,9 @@
           "OPT-IN": !!profile?.optIn,
 
           // Context
-          GIVEAWAY: localStorage.getItem("giveaway") || giveaway,
-          STORE: store,
+          STORE: store,                         // from ?source mapping
           "FAVORITE STORE": profile?.favoriteStore || "",
-          TIMESTAMP: getVancouverTimestamp(),
+          TIMESTAMP: getVancouverTimestamp(),   // local time
           "TOTAL VISITS": visitCount,
 
           // Geo/IP
